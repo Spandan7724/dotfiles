@@ -1,0 +1,41 @@
+# Editors and NvChad prerequisites
+zed
+helix
+neovim
+ripgrep
+tree-sitter-cli
+
+# Python
+python
+python-pip
+uv
+
+# Rust (the installer selects the stable toolchain with rustup)
+rustup
+
+# Go
+go
+
+# JavaScript / TypeScript runtime and package manager
+nodejs
+npm
+typescript
+
+# Native build toolchains
+gcc
+clang
+make
+cmake
+ninja
+pkgconf
+
+# Debuggers and shell tooling
+gdb
+lldb
+shellcheck
+shfmt
+
+# Language servers used directly by Helix and available to other editors
+pyright
+gopls
+typescript-language-server

@@ -1,0 +1,13 @@
+* {
+    bg: #111111f2;
+    bg-alt: #1c1c1cf2;
+    bg-hover: #2b2b2bff;
+    bg-selected: #444444ff;
+    fg: #f5f5f5ff;
+    fg-muted: #c7c7c7ff;
+    fg-dark: #ffffffff;
+    accent: #ffffffff;
+    accent-soft: #ffffff33;
+    urgent: #ffb4abff;
+    border-color: #494949ff;
+}

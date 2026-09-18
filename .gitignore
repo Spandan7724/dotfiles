@@ -1,0 +1,11 @@
+# Machine-local and GUI-managed Hyprland configuration
+.config/hypr/machine.lua
+.config/hypr/gpu/local.lua
+.config/hypr/hyprland-gui.lua
+
+# Runtime and editor state
+*.log
+.cache/
+
+# Assistant session transcripts kept locally for reference
+codex-session-*.md

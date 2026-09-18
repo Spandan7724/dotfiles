@@ -1,0 +1,7 @@
+# Base installation and command-line utilities
+base-devel
+git
+jq
+unzip
+xdg-utils
+

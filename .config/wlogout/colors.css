@@ -1,0 +1,8 @@
+/* Fallback wallpaper colors. Matugen overwrites this file on every wallpaper
+ * change; the tracked version keeps the overlay usable before the first run. */
+@define-color wlogout_scrim rgba(17, 17, 17, 0.42);
+@define-color wlogout_button_bg rgba(18, 18, 18, 0.55);
+@define-color wlogout_button_hover rgba(255, 255, 255, 0.38);
+@define-color wlogout_border transparent;
+@define-color wlogout_accent #ffffff;
+@define-color wlogout_fg #ffffff;

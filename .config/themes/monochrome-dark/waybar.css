@@ -1,0 +1,6 @@
+@define-color bar_bg rgba(20, 20, 20, 0.50);
+@define-color tooltip_bg rgba(20, 20, 20, 0.92);
+@define-color foreground #ffffff;
+@define-color muted #a2a2a2;
+@define-color hover #ffffff;
+@define-color critical #ff6b6b;

@@ -1,0 +1,13 @@
+* {
+    bg: #00000020;
+    bg-alt: #00000000;
+    bg-hover: #242424ff;
+    bg-selected: #ffffff10;
+    fg: #f5f5f5ff;
+    fg-muted: #a2a2a2ff;
+    fg-dark: #6f6f6fff;
+    accent: #ffffffff;
+    accent-soft: #ffffff33;
+    urgent: #ff6b6bff;
+    border-color: #ffffff00;
+}

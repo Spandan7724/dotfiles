@@ -1,0 +1,57 @@
+# ~/.config/dunst/dunstrc
+# Docs: https://man.archlinux.org/man/dunst.5
+#
+# Colors deliberately live in dunstrc.d/ drop-ins instead of this file. Dunst
+# reads dunstrc.d/*.conf in lexical order after the base config and lets the
+# later file win, so the theme profile and the wallpaper palette can override
+# appearance without this file ever being rewritten.
+
+[global]
+    monitor = 0
+    follow = mouse
+
+    width = (240, 420)
+    height = (0, 300)
+    origin = top-right
+    offset = (12, 12)
+    gap_size = 6
+
+    padding = 12
+    horizontal_padding = 14
+    frame_width = 1
+    corner_radius = 8
+
+    font = JetBrainsMono Nerd Font 10
+    markup = full
+    format = "<b>%s</b>\n%b"
+    alignment = left
+    vertical_alignment = center
+    word_wrap = yes
+    ellipsize = middle
+
+    icon_position = left
+    min_icon_size = 24
+    max_icon_size = 48
+    icon_theme = "Papirus-Dark, Papirus, Adwaita"
+    enable_recursive_icon_lookup = true
+
+    notification_limit = 5
+    sort = urgency_descending
+    idle_threshold = 120
+    show_age_threshold = 60
+    stack_duplicates = true
+    hide_duplicate_count = false
+    show_indicators = false
+
+    mouse_left_click = do_action, close_current
+    mouse_middle_click = close_all
+    mouse_right_click = close_current
+
+[urgency_low]
+    timeout = 5
+
+[urgency_normal]
+    timeout = 8
+
+[urgency_critical]
+    timeout = 0

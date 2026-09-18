@@ -1,0 +1,61 @@
+/* ~/.config/wlogout/style.css
+ * Docs: https://github.com/ArtsyMacaw/wlogout
+ *
+ * wlogout renders with GTK, so it takes the same @import + @define-color
+ * approach as Waybar: the theme profile first, then the Matugen palette.
+ * Launched with: wlogout -b 1 -c 20 -r 20 -L 1700 -R 1700 -T 325 -B 325
+ */
+@import "../themes/current/wlogout.css";
+@import "colors.css";
+
+* {
+    background-image: none;
+    box-shadow: none;
+    font-size: 0px;
+}
+
+window {
+    background-color: @wlogout_scrim;
+}
+
+button {
+    margin: 0;
+
+    min-width: 100px;
+    min-height: 100px;
+
+    border-radius: 100px;
+    border: 1px solid @wlogout_border;
+
+    color: @wlogout_fg;
+    background-color: @wlogout_button_bg;
+
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 20%;
+
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+
+    transition: all 0.2s ease;
+}
+
+button:hover,
+button:focus,
+button:active {
+    background-color: @wlogout_button_hover;
+    border-color: @wlogout_accent;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
+    outline: none;
+}
+
+#shutdown {
+    background-image: url("icons/shutdown.png");
+}
+
+#reboot {
+    background-image: url("icons/reboot.png");
+}
+
+#logout {
+    background-image: url("icons/logout.png");
+}

@@ -1,0 +1,40 @@
+"$schema" = "https://starship.rs/config-schema.json"
+
+format = """
+$directory$git_branch$git_status$python$rust$golang$nodejs
+$character
+"""
+
+palette = "theme"
+
+[directory]
+style = "bold foreground"
+truncation_length = 3
+
+[git_branch]
+symbol = "󰘬 "
+style = "muted"
+
+[git_status]
+style = "muted"
+
+[python]
+style = "muted"
+
+[rust]
+style = "muted"
+
+[golang]
+style = "muted"
+
+[nodejs]
+style = "muted"
+
+[character]
+success_symbol = "[❯](foreground)"
+error_symbol = "[❯](bold error)"
+
+[palettes.theme]
+foreground = "#151515"
+muted = "#666666"
+error = "#b00020"

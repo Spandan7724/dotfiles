@@ -1,0 +1,12 @@
+/* Profile colors for the monochrome-light theme.
+ *
+ * The button icons are white PNGs with no recolorable source, so the buttons
+ * stay dark in the light profile and only the scrim lightens. A light scrim
+ * with dark circular buttons keeps the icons legible instead of washing them
+ * out, and matches how lock and logout overlays behave on other desktops. */
+@define-color wlogout_scrim rgba(244, 244, 244, 0.45);
+@define-color wlogout_button_bg rgba(24, 24, 24, 0.62);
+@define-color wlogout_button_hover rgba(0, 0, 0, 0.78);
+@define-color wlogout_border transparent;
+@define-color wlogout_accent rgba(0, 0, 0, 0.45);
+@define-color wlogout_fg #ffffff;

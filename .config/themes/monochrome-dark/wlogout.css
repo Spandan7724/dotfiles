@@ -1,0 +1,7 @@
+/* Profile colors for the monochrome-dark theme. */
+@define-color wlogout_scrim rgba(12, 12, 12, 0.30);
+@define-color wlogout_button_bg rgba(12, 12, 12, 0.40);
+@define-color wlogout_button_hover rgba(255, 255, 255, 0.12);
+@define-color wlogout_border transparent;
+@define-color wlogout_accent rgba(255, 255, 255, 0.45);
+@define-color wlogout_fg #ffffff;

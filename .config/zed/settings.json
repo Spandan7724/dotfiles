@@ -1,0 +1,14 @@
+{
+  "theme": {
+    "mode": "system",
+    "dark": "Personal Monochrome Dark",
+    "light": "Personal Monochrome Light"
+  },
+  "buffer_font_family": "JetBrainsMono Nerd Font",
+  "terminal": {
+    "font_family": "JetBrainsMono Nerd Font"
+  },
+  "vim_mode": true,
+  "autosave": "on_focus_change",
+  "format_on_save": "on"
+}

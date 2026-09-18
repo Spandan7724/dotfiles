@@ -1,0 +1,78 @@
+# Hyprland desktop
+hyprland
+waybar
+rofi
+hyprlock
+wlogout
+quickshell
+hyprmod
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+xorg-xwayland
+dunst
+networkmanager
+network-manager-applet
+polkit-kde-agent
+
+# Browsers
+zen-browser-bin
+brave-bin
+
+# Wallpaper and screenshots
+awww
+matugen
+grim
+slurp
+imagemagick
+
+# Clipboard
+cliphist
+wl-clipboard
+
+# Audio and media controls
+pipewire
+pipewire-pulse
+wireplumber
+pavucontrol
+playerctl
+
+# Terminal and file manager
+kitty
+thunar
+tumbler
+ffmpegthumbnailer
+papirus-icon-theme
+papirus-folders
+nwg-look
+mpv
+
+# Laptop integration
+bluez
+bluez-utils
+blueman
+gammastep
+brightnessctl
+
+# Power management. power-profiles-daemon is the conservative baseline; TLP is
+# deliberately absent because the two overwrite the same kernel tunables.
+# https://linrunner.de/tlp/faq/ppd.html
+power-profiles-daemon
+upower
+powertop
+
+# Fonts
+ttf-jetbrains-mono-nerd
+ttf-iosevka-nerd
+ttf-cascadia-code-nerd
+otf-font-awesome
+
+# Shells and desktop utilities
+fish
+zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
+starship
+eza
+btop
+cava
+fastfetch

@@ -1,0 +1,134 @@
+@import "../themes/current/waybar.css";
+@import "colors.css";
+
+/* General */
+* {
+    font-family: "JetBrainsMono Nerd Font", "Symbols Nerd Font Mono", monospace;
+    font-size: 11px;
+    min-height: 0;
+}
+
+window#waybar {
+    min-height: 10px;
+    background-color: rgba(20, 20, 20, 0);
+    color: @foreground;
+}
+
+/* LEFT */
+.modules-left {
+    background-color: @bar_bg;
+    border-radius: 10px;
+    margin: 4px 0 2px 6px;
+}
+
+/* CENTER */
+.modules-center {
+    background-color: @bar_bg;
+    border-radius: 10px;
+    margin: 4px 0 2px;
+}
+
+/* RIGHT */
+.modules-right {
+    background-color: @bar_bg;
+    border-radius: 10px;
+    margin: 4px 6px 2px 0;
+}
+
+/* Module spacing */
+#cpu,
+#memory,
+#clock,
+#pulseaudio,
+#custom-mpris-marquee,
+#custom-power,
+#battery,
+#power-profiles-daemon,
+#temperature {
+    padding: 0 10px;
+    margin: 0 2px;
+}
+
+/* Power */
+#custom-power {
+    color: @foreground;
+    font-size: 15px;
+    margin-right: 10px;
+}
+
+/* MPRIS */
+#custom-mpris-marquee {
+    padding: 0 10px;
+}
+
+/* Clock */
+#clock {
+    font-weight: bold;
+}
+
+/* Temperature */
+#temperature.critical {
+    color: @critical;
+}
+
+/* Battery */
+#battery.warning:not(.charging) {
+    color: @muted;
+}
+
+#battery.critical:not(.charging) {
+    color: @critical;
+}
+
+#battery.charging,
+#battery.plugged {
+    color: @hover;
+}
+
+/* Power profile */
+#power-profiles-daemon.performance {
+    color: @hover;
+}
+
+#power-profiles-daemon.power-saver {
+    color: @muted;
+}
+
+/* Tooltip */
+tooltip {
+    background-color: @tooltip_bg;
+    color: @foreground;
+    font-weight: bold;
+    border: 1px solid rgba(255, 255, 255, 0);
+    border-radius: 10px;
+}
+
+tooltip label {
+    color: @foreground;
+    font-size: 13px;
+    padding: 0;
+    margin: 0;
+}
+
+/* Interactive hover effect */
+#cpu,
+#memory,
+#temperature,
+#clock,
+#pulseaudio,
+#battery,
+#power-profiles-daemon,
+#custom-mpris-marquee {
+    transition: font-size 0.15s ease;
+}
+
+#cpu:hover,
+#memory:hover,
+#temperature:hover,
+#clock:hover,
+#pulseaudio:hover,
+#battery:hover,
+#power-profiles-daemon:hover,
+#custom-mpris-marquee:hover {
+    font-size: 13px;
+}
