@@ -5,9 +5,9 @@
 # draw on this machine, and the compositor is the only component that can
 # change the mode.
 #
-# Runtime only: this uses `hyprctl keyword`, so nothing is written to disk and a
-# `hyprctl reload` returns to the mode in machine.lua.
-# Docs: https://wiki.hypr.land/Configuring/Using-hyprctl/
+# Runtime only: this evaluates `hl.monitor(...)` in the running compositor, so
+# nothing is written to disk and a `hyprctl reload` returns to machine.lua.
+# Docs: https://wiki.hypr.land/Configuring/Advanced-and-Cool/Using-hyprctl/
 
 set -uo pipefail
 
@@ -15,20 +15,22 @@ readonly BATTERY_REFRESH=60
 readonly POLL_SECONDS=5
 
 ac_online() {
-    local supply
+    local supply type
     for supply in /sys/class/power_supply/*; do
         [[ -r "$supply/type" && -r "$supply/online" ]] || continue
-        [[ "$(<"$supply/type")" == "Mains" ]] || continue
+        type="$(<"$supply/type")"
+        [[ "$type" != "Battery" && "$type" != "Unknown" ]] || continue
         [[ "$(<"$supply/online")" == "1" ]] && return 0
     done
     return 1
 }
 
 has_mains() {
-    local supply
+    local supply type
     for supply in /sys/class/power_supply/*; do
-        [[ -r "$supply/type" ]] || continue
-        [[ "$(<"$supply/type")" == "Mains" ]] && return 0
+        [[ -r "$supply/type" && -r "$supply/online" ]] || continue
+        type="$(<"$supply/type")"
+        [[ "$type" != "Battery" && "$type" != "Unknown" ]] && return 0
     done
     return 1
 }
@@ -46,14 +48,35 @@ internal_monitor() {
           ] | @tsv'
 }
 
-# Highest refresh rate available at the panel's current resolution.
-best_refresh_for() {
+# Refresh rates available at the panel's current resolution.
+available_refreshes_for() {
     local name="$1" resolution="$2"
     hyprctl -j monitors all 2>/dev/null | jq -r --arg name "$name" --arg res "$resolution" '
         .[] | select(.name == $name) | .availableModes[]?
         | select(startswith($res + "@"))
-        | split("@")[1] | sub("Hz$"; "") | tonumber' \
-        | sort -gr | head -n 1
+        | split("@")[1] | sub("Hz$"; "") | tonumber'
+}
+
+# Highest refresh rate available at the panel's current resolution.
+best_refresh_for() {
+    available_refreshes_for "$1" "$2" | sort -gr | head -n 1
+}
+
+# Use the advertised mode closest to 60 Hz instead of assuming the EDID calls
+# it exactly 60. Panels commonly expose values such as 59.94 or 60.01.
+battery_refresh_for() {
+    available_refreshes_for "$1" "$2" | awk -v target="$BATTERY_REFRESH" '
+        BEGIN { best_delta = -1 }
+        {
+            delta = $1 - target
+            if (delta < 0) delta = -delta
+            if (best_delta < 0 || delta < best_delta) {
+                best = $1
+                best_delta = delta
+            }
+        }
+        END { if (best_delta >= 0) print best }
+    '
 }
 
 apply_refresh() {
@@ -62,9 +85,15 @@ apply_refresh() {
 
     IFS=$'\t' read -r name resolution position scale < <(internal_monitor) || return
     [[ -n "${name:-}" && -n "${resolution:-}" ]] || return
+    [[ "$name" =~ ^[A-Za-z0-9._:-]+$ ]] || return
+    [[ "$resolution" =~ ^[0-9]+x[0-9]+$ ]] || return
+    [[ "$position" =~ ^-?[0-9]+x-?[0-9]+$ ]] || return
+    [[ "$scale" =~ ^[0-9]+([.][0-9]+)?$ ]] || return
+    [[ "$target_refresh" =~ ^[0-9]+([.][0-9]+)?$ ]] || return
 
-    hyprctl keyword monitor \
-        "$name,${resolution}@${target_refresh},${position},${scale}" >/dev/null 2>&1
+    hyprctl eval \
+        "hl.monitor({ output = \"$name\", mode = \"${resolution}@${target_refresh}\", position = \"$position\", scale = $scale })" \
+        >/dev/null 2>&1
 }
 
 command -v hyprctl >/dev/null 2>&1 || exit 0
@@ -87,19 +116,27 @@ while true; do
     fi
 
     if [[ "$state" != "$last_state" ]]; then
+        refresh=""
+        name=""
+        resolution=""
+        IFS=$'\t' read -r name resolution _ _ < <(internal_monitor) || true
+
         if [[ "$state" == "ac" ]]; then
-            name=""
-            resolution=""
-            IFS=$'\t' read -r name resolution _ _ < <(internal_monitor) || true
-            refresh=""
             if [[ -n "${name:-}" && -n "${resolution:-}" ]]; then
                 refresh="$(best_refresh_for "$name" "$resolution")"
             fi
-            [[ -n "$refresh" ]] && apply_refresh "$refresh"
         else
-            apply_refresh "$BATTERY_REFRESH"
+            if [[ -n "${name:-}" && -n "${resolution:-}" ]]; then
+                refresh="$(battery_refresh_for "$name" "$resolution")"
+            fi
         fi
-        last_state="$state"
+
+        # Do not record the transition unless the monitor change succeeded.
+        # This makes startup races and temporary compositor errors retry on the
+        # next poll instead of remaining stuck until the charger state changes.
+        if [[ -n "$refresh" ]] && apply_refresh "$refresh"; then
+            last_state="$state"
+        fi
     fi
 
     sleep "$POLL_SECONDS"

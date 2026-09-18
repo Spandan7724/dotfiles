@@ -3,7 +3,7 @@
  *
  * wlogout renders with GTK, so it takes the same @import + @define-color
  * approach as Waybar: the theme profile first, then the Matugen palette.
- * Launched with: wlogout -b 1 -c 20 -r 20 -L 1700 -R 1700 -T 325 -B 325
+ * Launched as a single-monitor vertical menu with display-safe margins.
  */
 @import "../themes/current/wlogout.css";
 @import "colors.css";

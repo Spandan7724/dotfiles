@@ -13,7 +13,7 @@ hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(browser))
 
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 hl.bind("SUPER + Tab", hl.dsp.exec_cmd("hyprlock"))
-hl.bind(mainMod .. " + GRAVE", hl.dsp.exec_cmd("pgrep -x wlogout >/dev/null || wlogout -b 1 -c 20 -r 20 -L 1700 -R 1700 -T 325 -B 325"))
+hl.bind(mainMod .. " + GRAVE", hl.dsp.exec_cmd("pgrep -x wlogout >/dev/null || wlogout -b 1 -c 20 -r 20 -m 80 -n --protocol layer-shell"))
 hl.bind(mainMod .. " + W", hl.dsp.exec_cmd("quickshell -n -c hyprquickpaper"))
 hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd(home .. "/.config/themes/picker.sh"))
 hl.bind(mainMod .. " + slash", hl.dsp.exec_cmd("hyprmod"))
@@ -67,7 +67,7 @@ end)
 
 -- Zoom
 local function zoomfunction(value)
-    local zoomvalue = hl.get_config("cursor:zoom_factor")
+    local zoomvalue = hl.get_config("cursor.zoom_factor")
     if (zoomvalue + value) > 1.5 then
         hl.config({ cursor = { zoom_factor = 1.5 } })
     elseif (zoomvalue + value) < 1.0 then

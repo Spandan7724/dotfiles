@@ -75,6 +75,11 @@ toolchain, clones the official NvChad starter, then verifies the result and
 prints a summary. HyprMod provides a graphical editor for Hyprland settings and
 shortcuts.
 
+Package resolution and installation are a hard gate: if any required official
+or AUR package cannot be resolved or installed, the script exits before it
+backs up or replaces configuration. Fix the reported package or network issue
+and rerun it.
+
 Nothing in the repository is needed at runtime — the deployment model is a
 copy, so the desktop keeps working if the clone is deleted. Keep it anyway:
 rerunning the installer is how you apply updates.
@@ -297,28 +302,36 @@ The 3200x2000 panel is the largest single power draw on this machine, so
 `~/.config/hypr/scripts/power-watch.sh` runs in the Hyprland session and drops
 the internal panel to 60 Hz on battery, restoring its highest available refresh
 rate on AC. It writes nothing to disk: the change is applied with `hyprctl
-keyword`, so `hyprctl reload` returns to the mode in `machine.lua`. A machine
-with no mains supply is treated as a desktop and the watcher exits immediately.
+eval` and `hl.monitor(...)`, so `hyprctl reload` returns to the mode in
+`machine.lua`. The watcher chooses the advertised panel mode closest to 60 Hz
+rather than assuming it is named exactly `60`, and retries temporary failures.
+A machine with no external power supply is treated as a desktop and the
+watcher exits immediately.
 
 ### NVIDIA runtime power management
 
 The dGPU is left at the driver default on purpose.
 `NVreg_DynamicPowerManagement` defaults to `0x03`, which NVIDIA documents as
 fine-grained runtime D3 on Ampere-and-newer notebooks, and the driver already
-ships `/lib/udev/rules.d/80-nvidia-pm.rules`. Forcing `0x02` would add risk
+ships an Arch runtime-PM rule as `/usr/lib/udev/rules.d/60-nvidia.rules`.
+Forcing `0x02` would add risk
 without adding capability, so the installer reports the live state instead:
 
 ```bash
 cat /proc/driver/nvidia/gpus/*/power
 ```
 
-The installer does enable `nvidia-suspend`, `nvidia-hibernate`, and
-`nvidia-resume`, which the Arch packages ship but do not enable. Without them
-video memory is not saved and restored across suspend.
+The first-install baseline uses NVIDIA's default kernel-callback suspend
+mechanism. It needs no special systemd units and preserves the essential video
+memory needed by ordinary workloads. The installer deliberately does not
+enable `nvidia-suspend`, `nvidia-hibernate`, or `nvidia-resume`.
 
-`NVreg_PreserveVideoMemoryAllocations=1` is not set. NVIDIA documents it as
-needed for advanced CUDA features and applications sensitive to video-memory
-loss, and CUDA is out of scope for this repository.
+Full video-memory preservation is a separate opt-in configuration. It requires
+the `/proc/driver/nvidia/suspend` systemd units,
+`NVreg_PreserveVideoMemoryAllocations=1`, and disk-backed temporary storage
+large enough for the GPU's allocations. That should be configured only if CUDA
+or another workload proves that it needs it, and only after ordinary suspend
+and resume have been validated on the laptop.
 
 ### What still needs measuring on real hardware
 

@@ -408,13 +408,20 @@ resolve_packages() {
 }
 
 install_packages() {
+    if [[ "${#UNKNOWN_PACKAGES[@]}" -gt 0 ]]; then
+        error "Required packages could not be resolved: ${UNKNOWN_PACKAGES[*]}"
+        error "Configuration deployment has not started; resolve the package names or network/AUR problem and rerun."
+        exit 1
+    fi
+
     if [[ "${#OFFICIAL_PACKAGES[@]}" -gt 0 ]]; then
         info "Installing official repository packages..."
         if sudo pacman -S --needed --noconfirm "${OFFICIAL_PACKAGES[@]}"; then
             success "Official packages installed."
         else
-            warning "pacman failed to install one or more packages."
-            ((INSTALL_FAILURES += 1))
+            error "pacman failed to install one or more required packages."
+            error "Stopping before configuration deployment to avoid a partial desktop installation."
+            exit 1
         fi
     fi
 
@@ -424,17 +431,14 @@ install_packages() {
             if "$AUR_HELPER" -S --needed --noconfirm "${AUR_PACKAGES[@]}"; then
                 success "AUR packages installed."
             else
-                warning "$AUR_HELPER failed to install one or more packages."
-                ((INSTALL_FAILURES += 1))
+                error "$AUR_HELPER failed to install one or more required packages."
+                error "Stopping before configuration deployment to avoid a partial desktop installation."
+                exit 1
             fi
         else
-            UNKNOWN_PACKAGES+=("${AUR_PACKAGES[@]}")
+            error "AUR packages were resolved but no AUR helper is available."
+            exit 1
         fi
-    fi
-
-    if [[ "${#UNKNOWN_PACKAGES[@]}" -gt 0 ]]; then
-        warning "Unresolved packages: ${UNKNOWN_PACKAGES[*]}"
-        ((INSTALL_FAILURES += 1))
     fi
 }
 
@@ -771,20 +775,18 @@ configure_power() {
     fi
 
     if [[ -n "$NVIDIA_PCI_ADDRESS" ]]; then
-        # The NVIDIA packages ship these units but do not enable them. Without
-        # them, video memory is not saved and restored across suspend.
-        local unit
-        for unit in nvidia-suspend.service nvidia-hibernate.service nvidia-resume.service; do
-            if systemctl list-unit-files "$unit" >/dev/null 2>&1; then
-                sudo systemctl enable "$unit" >/dev/null 2>&1 \
-                    || warning "$unit could not be enabled."
-            fi
-        done
+        # Keep NVIDIA's default kernel-callback suspend mechanism for the first
+        # hardware validation pass. The nvidia-suspend/hibernate/resume units
+        # select the separate /proc/driver/nvidia/suspend mechanism, intended
+        # for PreserveVideoMemoryAllocations or advanced CUDA workloads. Those
+        # choices also require a deliberately sized backing store and should
+        # only be enabled after suspend has been tested on the real laptop.
+        info "NVIDIA suspend left on the driver's default kernel-callback mechanism."
 
         # Runtime D3 is left at the driver default. NVreg_DynamicPowerManagement
         # defaults to 0x03, which the driver documents as fine-grained power
-        # control on Ampere-and-newer notebooks, and the driver already ships
-        # /lib/udev/rules.d/80-nvidia-pm.rules. Forcing 0x02 here would add risk
+        # control on Ampere-and-newer notebooks, and Arch's NVIDIA package ships
+        # a runtime-PM udev rule. Forcing 0x02 here would add risk
         # without adding capability; verify_power reports the live state instead.
         info "NVIDIA runtime power management left at the driver default (fine-grained on this GPU generation)."
     fi
