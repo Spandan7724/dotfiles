@@ -1,0 +1,16 @@
+/* A single prompt with no result list, for the calculator and web search. */
+
+@import "config.rasi"
+
+window {
+    width: 460px;
+}
+
+mainbox {
+    children: [inputbar];
+    spacing: 0;
+}
+
+entry {
+    placeholder: "";
+}

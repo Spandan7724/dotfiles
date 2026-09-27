@@ -1,0 +1,45 @@
+/* The shortcut cheatsheet: wider and denser than the menu, two columns of
+   monospaced text, and a fixed page rather than a self-sizing list. */
+
+@import "config.rasi"
+
+configuration {
+    show-icons: false;
+}
+
+window {
+    width: 720px;
+}
+
+mainbox {
+    children: [inputbar, message, listview];
+}
+
+listview {
+    lines: 12;
+    spacing: 1px;
+    fixed-height: true;
+    dynamic: false;
+}
+
+element {
+    padding: 6px 12px;
+}
+
+element-text {
+    font: "Iosevka Nerd Font Mono 11";
+}
+
+entry {
+    /* The message line below already explains the box. */
+    placeholder: "";
+}
+
+message {
+    padding: 0 4px 2px;
+}
+
+textbox {
+    font: "Iosevka Nerd Font Mono 10";
+    text-color: @fg-muted;
+}

@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+#
+# Sets or clears UEFI BootNext for Windows Boot Manager. The firmware then
+# launches bootmgfw.efi directly on the next boot only, so GRUB never sits in
+# the chain and BitLocker sees the boot path it sealed against. BootNext is
+# consumed by that boot; the one after returns to the normal BootOrder.
+#
+# The entry is looked up by label on every run rather than hardcoded, because
+# firmware is free to renumber Boot#### entries.
+
+set -euo pipefail
+
+action="${1:-}"
+
+case "$action" in
+    set)
+        entry="$(efibootmgr | sed -nE 's/^Boot([0-9A-Fa-f]{4})\*?[[:space:]]+Windows Boot Manager([[:space:]].*)?$/\1/p' | head -n1)"
+        if [[ -z "$entry" ]]; then
+            printf 'No "Windows Boot Manager" UEFI entry found.\n' >&2
+            exit 1
+        fi
+        efibootmgr --bootnext "$entry" >/dev/null
+        # Read it back: some firmware silently refuses NVRAM writes.
+        if ! efibootmgr | grep -qx "BootNext: $entry"; then
+            printf 'Firmware did not accept BootNext %s.\n' "$entry" >&2
+            exit 1
+        fi
+        printf '%s\n' "$entry"
+        ;;
+    clear)
+        # efibootmgr -N does not remove it on every firmware, so fall back to
+        # deleting the variable through efivarfs, where files are immutable
+        # until chattr -i. Either way, check it is really gone.
+        var=/sys/firmware/efi/efivars/BootNext-8be4df61-93ca-11d2-aa0d-00e098032b8c
+        [[ -e "$var" ]] || exit 0
+        efibootmgr --delete-bootnext >/dev/null 2>&1 || true
+        if [[ -e "$var" ]]; then
+            chattr -i "$var" && rm -f -- "$var"
+        fi
+        if [[ -e "$var" ]]; then
+            printf 'Could not clear BootNext.\n' >&2
+            exit 1
+        fi
+        ;;
+    *)
+        printf 'Usage: %s <set|clear>\n' "$0" >&2
+        exit 2
+        ;;
+esac

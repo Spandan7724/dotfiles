@@ -1,66 +1,214 @@
 {
     "layer": "top",
     "position": "top",
-    "exclusive": true, // "false" 
+    "exclusive": true,
+    "fixed-center": true,
+    "height": 36,
+    "margin-top": 4,
+    "margin-left": 8,
+    "margin-right": 8,
     "spacing": 0,
+    "reload_style_on_change": true,
 
-    "modules-left": ["cpu", "memory", "temperature"],
-    "modules-center": ["clock"],
-    "modules-right": ["custom/mpris-marquee", "pulseaudio", "power-profiles-daemon", "battery", "custom/power"],
+    "modules-left": [
+        "custom/launcher",
+        "hyprland/workspaces",
+        "hyprland/window"
+    ],
+    "modules-center": [
+        "custom/search",
+        "clock"
+    ],
+    "modules-right": [
+        "custom/media",
+        "privacy",
+        "group/tray",
+        "group/connectivity",
+        "group/audio",
+        "battery",
+        "group/system",
+        "group/status",
+        "group/session"
+    ],
 
-    "cpu": {
-        "interval": 1,
-        "format": "CPU {usage}%",
+    "custom/launcher": {
+        "format": "󰣇",
+        "tooltip-format": "Desktop menu  •  Super+Escape",
+        "on-click": "~/.config/hypr/scripts/desktop-menu.sh",
+        "on-click-right": "~/.config/hypr/scripts/keybinds.sh"
     },
 
-    "memory": {
-        "interval": 1,
-        "format": "RAM {percentage}%",
-        "tooltip-format": "{used} / {total}GiB",
+    "hyprland/workspaces": {
+        "format": "{icon}",
+        "format-icons": {
+            "active": "",
+            "urgent": "󰀦",
+            "special": "󱄅",
+            "empty": "",
+            "default": ""
+        },
+        "show-special": true,
+        "special-visible-only": true,
+        "sort-by": "number",
+        "move-to-monitor": true,
+        "enable-bar-scroll": false,
+        "on-click": "activate",
+        "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+        "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
     },
 
-    "temperature": {
-        "critical-threshold": 80,
-        "interval": 1,
-        "format": " {temperatureC}°C",
-        "format-critical": " {temperatureC}°C",
-        "tooltip": true,
-        "tooltip-format": "CPU Temp: {temperatureC}°C",
-        "on-click": "~/.config/waybar/scripts/toggle-gammastep"
-    },
-//  "format": "{:%H:%M}",
-    "clock": {
-        "format": "{:%H:%M}",
-        "tooltip-format": "<tt><small>{calendar}</small></tt>",
-        "calendar": {
-            "mode": "month",
-            "format": {
-                "today": "<b><u>{}</u></b>"
-            }
+    "hyprland/window": {
+        "format": "{title}",
+        "icon": true,
+        "icon-size": 15,
+        "max-length": 26,
+        "separate-outputs": true,
+        "rewrite": {
+            "": "Desktop"
         }
     },
 
-    "custom/mpris-marquee": {
-        "exec": "~/.config/waybar/scripts/mpris-marquee.sh",
+    "custom/media": {
+        "exec": "~/.config/waybar/scripts/media.sh",
         "return-type": "json",
-        "format": "{}",
-        "on-click": "playerctl --player=\"$(~/.config/waybar/scripts/playerctl-active.sh)\" play-pause",
-        "on-click-right": "playerctl --player=\"$(~/.config/waybar/scripts/playerctl-active.sh)\" next",
-        "on-click-middle": "playerctl --player=\"$(~/.config/waybar/scripts/playerctl-active.sh)\" previous"
+        "interval": 2,
+        "on-click": "playerctl play-pause",
+        "on-click-middle": "playerctl previous",
+        "on-click-right": "playerctl next"
+    },
+
+    "custom/search": {
+        "format": "󰍉  Search",
+        "tooltip-format": "Applications  •  Super+D",
+        "on-click": "~/.config/hypr/scripts/apps-menu.sh",
+        "on-click-right": "~/.config/hypr/scripts/workspace-overview.sh toggle"
+    },
+
+    "clock": {
+        "interval": 30,
+        "format": "{:%a %d %b  %H:%M}",
+        "format-alt": "{:%A, %d %B %Y  %H:%M}",
+        "tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>",
+        "calendar": {
+            "mode": "month",
+            "weeks-pos": "right",
+            "on-scroll": 1,
+            "format": {
+                "months": "<span color='#ffffff'><b>{}</b></span>",
+                "days": "<span color='#ffffff'>{}</span>",
+                "weeks": "<span color='#888888'>W{}</span>",
+                "weekdays": "<span color='#aaaaaa'>{}</span>",
+                "today": "<span color='#ffffff'><b><u>{}</u></b></span>"
+            }
+        },
+        "actions": {
+            "on-click-right": "mode",
+            "on-scroll-up": "shift_up",
+            "on-scroll-down": "shift_down"
+        }
+    },
+
+    "group/tray": {
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 220,
+            "children-class": "drawer-child",
+            "transition-left-to-right": false
+        },
+        "modules": ["custom/tray", "tray"]
+    },
+
+    "custom/tray": {
+        "format": "󰕰",
+        "tooltip-format": "Background applications"
+    },
+
+    "tray": {
+        "icon-size": 16,
+        "spacing": 7,
+        "show-passive-items": true
+    },
+
+    "group/connectivity": {
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 220,
+            "children-class": "drawer-child",
+            "transition-left-to-right": false
+        },
+        "modules": ["network", "bluetooth"]
+    },
+
+    "network": {
+        "interval": 3,
+        "format-wifi": "󰤨",
+        "format-ethernet": "󰈀",
+        "format-linked": "󰈀",
+        "format-disconnected": "󰤭",
+        "format-disabled": "󰤮",
+        "tooltip-format-wifi": "{essid}\nSignal: {signalStrength}%\nAddress: {ipaddr}\n↓ {bandwidthDownBytes}  ↑ {bandwidthUpBytes}",
+        "tooltip-format-ethernet": "Ethernet: {ifname}\nAddress: {ipaddr}\n↓ {bandwidthDownBytes}  ↑ {bandwidthUpBytes}",
+        "tooltip-format-disconnected": "Network disconnected",
+        "on-click": "nm-connection-editor"
+    },
+
+    "bluetooth": {
+        "format": "󰂯",
+        "format-disabled": "󰂲",
+        "format-off": "󰂲",
+        "format-on": "󰂯",
+        "format-connected": "󰂱 {num_connections}",
+        "format-connected-battery": "󰂱 {device_battery_percentage}%",
+        "tooltip-format": "Bluetooth: {status}",
+        "tooltip-format-connected": "{device_alias}",
+        "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
+        "on-click": "blueman-manager"
+    },
+
+    "group/audio": {
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 220,
+            "children-class": "drawer-child",
+            "transition-left-to-right": false
+        },
+        "modules": ["pulseaudio", "pulseaudio#microphone"]
     },
 
     "pulseaudio": {
-        "format": "{icon}  {volume}%",
-        "format-muted": "Muted",
+        "format": "{icon} {volume}%",
+        "format-bluetooth": "󰂰 {volume}%",
+        "format-muted": "󰖁",
         "format-icons": {
-            "default": ["", "", ""]
+            "headphone": "󰋋",
+            "headset": "󰋎",
+            "default": ["󰕿", "󰖀", "󰕾"]
         },
-        "tooltip": false,
+        "scroll-step": 5,
+        "tooltip-format": "{desc}\nVolume: {volume}%",
         "on-click": "pavucontrol",
         "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
     },
 
-    // https://man.archlinux.org/man/waybar-battery.5
+    "pulseaudio#microphone": {
+        "format": "{format_source}",
+        "format-source": "󰍬 {volume}%",
+        "format-source-muted": "󰍭",
+        "tooltip-format": "Microphone: {volume}%",
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
+        "on-click-right": "pavucontrol -t 4"
+    },
+
+    "privacy": {
+        "icon-spacing": 6,
+        "icon-size": 16,
+        "transition-duration": 150,
+        "modules": [
+            {"type": "screenshare", "tooltip": true},
+            {"type": "audio-in", "tooltip": true}
+        ]
+    },
+
     "battery": {
         "interval": 10,
         "states": {
@@ -71,25 +219,148 @@
         "format-charging": "󰂄 {capacity}%",
         "format-plugged": "󰚥 {capacity}%",
         "format-icons": ["󰁺", "󰁼", "󰁾", "󰂀", "󰂂", "󰁹"],
-        "tooltip-format": "{timeTo}\n{power}W",
+        "tooltip-format": "{timeTo}\n{power}W"
     },
 
-    // https://man.archlinux.org/man/waybar-power-profiles-daemon.5
+    "group/system": {
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 220,
+            "children-class": "drawer-child",
+            "transition-left-to-right": false
+        },
+        "modules": [
+            "custom/system",
+            "backlight",
+            "power-profiles-daemon",
+            "cpu",
+            "memory",
+            "temperature",
+            "disk"
+        ]
+    },
+
+    "custom/system": {
+        "format": "󰍛",
+        "tooltip-format": "Power profile  •  hover for system resources",
+        "on-click": "~/.config/hypr/scripts/power-profile.sh menu"
+    },
+
+    "backlight": {
+        "format": "{icon} {percent}%",
+        "format-icons": ["󰃚", "󰃛", "󰃜", "󰃝", "󰃞", "󰃟", "󰃠"],
+        "scroll-step": 5,
+        "tooltip-format": "Brightness: {percent}%"
+    },
+
     "power-profiles-daemon": {
         "format": "{icon}",
         "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
-        "tooltip": true,
         "format-icons": {
             "default": "󰾆",
             "performance": "󰓅",
             "balanced": "󰾅",
             "power-saver": "󰌪"
-        }
+        },
+        "on-click": "~/.config/hypr/scripts/power-profile.sh menu"
+    },
+
+    "cpu": {
+        "interval": 2,
+        "format": "CPU {usage}%",
+        "tooltip-format": "Load: {load}\nFrequency: {avg_frequency} GHz"
+    },
+
+    "memory": {
+        "interval": 2,
+        "format": "RAM {percentage}%",
+        "tooltip-format": "{used:0.1f} / {total:0.1f} GiB"
+    },
+
+    "temperature": {
+        "critical-threshold": 80,
+        "interval": 2,
+        "format": "{temperatureC}°C",
+        "format-critical": "󰸁 {temperatureC}°C",
+        "tooltip-format": "CPU temperature: {temperatureC}°C"
+    },
+
+    "disk": {
+        "interval": 30,
+        "path": "/",
+        "format": "SSD {percentage_used}%",
+        "tooltip-format": "{used} / {total} used on {path}"
+    },
+
+    "group/status": {
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 220,
+            "children-class": "drawer-child",
+            "transition-left-to-right": false
+        },
+        "modules": [
+            "custom/notifications",
+            "custom/updates",
+            "custom/nightlight",
+            "idle_inhibitor"
+        ]
+    },
+
+    "custom/notifications": {
+        "exec": "~/.config/waybar/scripts/notifications.sh",
+        "return-type": "json",
+        "interval": 2,
+        "on-click": "dunstctl history-pop",
+        "on-click-middle": "sh -c 'dunstctl close-all; dunstctl history-clear'",
+        "on-click-right": "dunstctl set-paused toggle"
+    },
+
+    "custom/updates": {
+        "exec": "~/.config/waybar/scripts/updates.sh",
+        "return-type": "json",
+        "interval": 1800,
+        "signal": 8,
+        "on-click": "kitty --class dotfiles-update -e bash -lc 'yay -Syu; read -rp \"Press Enter to close\"'"
+    },
+
+    "custom/nightlight": {
+        "exec": "~/.config/waybar/scripts/nightlight-status.sh",
+        "return-type": "json",
+        "interval": 2,
+        "on-click": "~/.config/waybar/scripts/toggle-gammastep"
+    },
+
+    "idle_inhibitor": {
+        "format": "{icon}",
+        "format-icons": {
+            "activated": "󰅶",
+            "deactivated": "󰾪"
+        },
+        "tooltip-format-activated": "Idle lock inhibited",
+        "tooltip-format-deactivated": "Idle lock enabled"
+    },
+
+    "group/session": {
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 220,
+            "children-class": "drawer-child",
+            "transition-left-to-right": false
+        },
+        "modules": ["custom/settings", "custom/power"]
+    },
+
+    "custom/settings": {
+        "format": "󰒓",
+        "tooltip-format": "Setup  •  right-click for defaults",
+        "on-click": "~/.config/hypr/scripts/desktop-menu.sh setup",
+        "on-click-right": "~/.config/hypr/scripts/defaults-menu.sh"
     },
 
     "custom/power": {
         "format": "⏻",
-        "tooltip": false,
-        "on-click": "pgrep -x wlogout >/dev/null || wlogout -b 1 -c 20 -r 20 -m 80 -n --protocol layer-shell"
+        "tooltip-format": "Power and session menu  •  Super+Grave",
+        "on-click": "~/.config/hypr/scripts/power-menu.sh"
     }
 }

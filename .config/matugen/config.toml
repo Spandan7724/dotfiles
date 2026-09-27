@@ -32,7 +32,7 @@ type = "SchemeTonalSpot"
 
 [templates.dunst]
 input_path = "~/.config/matugen/templates/dunst.conf"
-output_path = "~/.config/dunst/dunstrc.d/90-colors.conf"
+output_path = "~/.config/dunst/dunstrc.d/40-colors.conf"
 type = "SchemeTonalSpot"
 
 [templates.hyprlock]

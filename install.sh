@@ -304,7 +304,7 @@ add_graphics_packages() {
     esac
 
     if [[ -n "$NVIDIA_PCI_ADDRESS" ]]; then
-        PACKAGES+=(nvidia-utils nvidia-prime)
+        PACKAGES+=(nvidia-utils nvidia-prime nvidia-settings)
 
         # 10de:2860 is the confirmed Ada-generation RTX 4070 Laptop GPU.
         if [[ "$NVIDIA_DEVICE_ID" == "0x2860" ]]; then
@@ -495,7 +495,7 @@ install_dotfiles() {
     # across a reinstall; generated files may be refreshed later when hardware
     # detection runs, while hand-edited files are left untouched.
     local local_file
-    for local_file in hypr/machine.lua hypr/gpu/local.lua hypr/hyprland-gui.lua; do
+    for local_file in hypr/machine.lua hypr/gpu/local.lua hypr/hyprland-gui.lua hypr/hypridle.conf; do
         if [[ -e "$BACKUP_DIR/$local_file" || -L "$BACKUP_DIR/$local_file" ]]; then
             mkdir -p "$(dirname "$CONFIG_DIR/$local_file")"
             cp -a -- "$BACKUP_DIR/$local_file" "$CONFIG_DIR/$local_file"
@@ -729,10 +729,68 @@ configure_services() {
         ((INSTALL_FAILURES += 1))
     fi
 
+    if systemctl list-unit-files libvirtd.service >/dev/null 2>&1; then
+        if sudo systemctl enable --now libvirtd.service; then
+            sudo usermod -aG libvirt "$USER" || warning "Could not add $USER to the libvirt group."
+            success "libvirt enabled; log out once before using system virtual machines."
+        else
+            warning "libvirt could not be enabled."
+            ((INSTALL_FAILURES += 1))
+        fi
+    fi
+
     info "Enabling PipeWire user services..."
     if ! systemctl --user enable --now pipewire.socket pipewire-pulse.socket wireplumber.service; then
         warning "One or more PipeWire user services could not be enabled."
         ((INSTALL_FAILURES += 1))
+    fi
+
+    systemctl --user daemon-reload
+    if systemctl --user list-unit-files dotfiles-power-profile.service >/dev/null 2>&1; then
+        if ! systemctl --user enable --now dotfiles-power-profile.service; then
+            warning "The desktop power-profile watcher could not be enabled."
+            ((INSTALL_FAILURES += 1))
+        fi
+    fi
+
+    local unit
+    for unit in firewalld.service cups.service; do
+        systemctl list-unit-files "$unit" >/dev/null 2>&1 || continue
+        if ! sudo systemctl enable --now "$unit"; then
+            warning "$unit could not be enabled."
+            ((INSTALL_FAILURES += 1))
+        fi
+    done
+}
+
+configure_login() {
+    info "Configuring the SDDM login screen..."
+
+    local theme_dir=/usr/share/sddm/themes/silent
+    if [[ -d "$theme_dir" ]]; then
+        sudo install -Dm644 "$REPO_DIR/system/sddm/90-silent.conf" /etc/sddm.conf.d/90-silent.conf
+        sudo install -Dm644 "$REPO_DIR/system/sddm/silent-theme-config.hook" /etc/pacman.d/hooks/sddm-silent-theme-config.hook
+        # Same edit the hook repeats after each upgrade of the theme package.
+        sudo sed -i -E -e 's|^ConfigFile=|# ConfigFile=|' \
+            -e 's|^# ConfigFile=configs/nord.conf$|ConfigFile=configs/nord.conf|' \
+            "$theme_dir/metadata.desktop"
+    else
+        warning "The SilentSDDM theme is not installed; SDDM will use its default theme."
+        ((INSTALL_FAILURES += 1))
+    fi
+
+    # Enabled but not started: starting a display manager mid-install would
+    # take over the terminal the installer is running in.
+    if systemctl list-unit-files sddm.service >/dev/null 2>&1; then
+        if ! sudo systemctl enable sddm.service; then
+            warning "SDDM could not be enabled; another display manager may already be active."
+            ((INSTALL_FAILURES += 1))
+        fi
+    fi
+
+    # zram swap. Left alone when the base install already configured it.
+    if [[ ! -e /etc/systemd/zram-generator.conf ]]; then
+        sudo install -Dm644 "$REPO_DIR/system/zram-generator.conf" /etc/systemd/zram-generator.conf
     fi
 }
 
@@ -744,6 +802,18 @@ configure_power() {
     fi
 
     info "Configuring power management..."
+
+    if [[ -f "$REPO_DIR/system/dotfiles-power-profile-root" ]]; then
+        sudo install -Dm755 "$REPO_DIR/system/dotfiles-power-profile-root" /usr/local/libexec/dotfiles-power-profile-root
+        printf '%s\n' "$USER ALL=(root) NOPASSWD: /usr/local/libexec/dotfiles-power-profile-root *" \
+            | sudo tee /etc/sudoers.d/dotfiles-power-profile >/dev/null
+        sudo chmod 0440 /etc/sudoers.d/dotfiles-power-profile
+        if ! sudo visudo -cf /etc/sudoers.d/dotfiles-power-profile >/dev/null; then
+            sudo rm -f /etc/sudoers.d/dotfiles-power-profile
+            warning "The power-profile sudo rule was invalid and has been removed."
+            ((INSTALL_FAILURES += 1))
+        fi
+    fi
 
     # power-profiles-daemon is the conservative baseline. TLP is intentionally
     # not installed: both tools drive the same kernel tunables and overwrite
@@ -775,6 +845,14 @@ configure_power() {
     fi
 
     if [[ -n "$NVIDIA_PCI_ADDRESS" ]]; then
+        if systemctl list-unit-files nvidia-powerd.service >/dev/null 2>&1; then
+            if sudo systemctl enable --now nvidia-powerd.service; then
+                success "NVIDIA Dynamic Boost enabled."
+            else
+                warning "nvidia-powerd could not be enabled; GPU Dynamic Boost may remain unavailable."
+                ((INSTALL_FAILURES += 1))
+            fi
+        fi
         # Keep NVIDIA's default kernel-callback suspend mechanism for the first
         # hardware validation pass. The nvidia-suspend/hibernate/resume units
         # select the separate /proc/driver/nvidia/suspend mechanism, intended
@@ -790,6 +868,50 @@ configure_power() {
         # without adding capability; verify_power reports the live state instead.
         info "NVIDIA runtime power management left at the driver default (fine-grained on this GPU generation)."
     fi
+}
+
+configure_windows_reboot() {
+    # Only meaningful on a UEFI machine that also has Windows Boot Manager.
+    if [[ ! -d /sys/firmware/efi ]] || ! command -v efibootmgr >/dev/null 2>&1; then
+        info "No UEFI/efibootmgr; skipping reboot-to-Windows."
+        return
+    fi
+    if ! efibootmgr | grep -q 'Windows Boot Manager'; then
+        info "No Windows Boot Manager entry; skipping reboot-to-Windows."
+        return
+    fi
+
+    info "Installing reboot-to-Windows..."
+
+    sudo install -Dm755 "$REPO_DIR/system/dotfiles-reboot-windows-root" /usr/local/libexec/dotfiles-reboot-windows-root
+    printf '%s\n' \
+        "$USER ALL=(root) NOPASSWD: /usr/local/libexec/dotfiles-reboot-windows-root set" \
+        "$USER ALL=(root) NOPASSWD: /usr/local/libexec/dotfiles-reboot-windows-root clear" \
+        | sudo tee /etc/sudoers.d/dotfiles-reboot-windows >/dev/null
+    sudo chmod 0440 /etc/sudoers.d/dotfiles-reboot-windows
+    if ! sudo visudo -cf /etc/sudoers.d/dotfiles-reboot-windows >/dev/null; then
+        sudo rm -f /etc/sudoers.d/dotfiles-reboot-windows
+        warning "The reboot-to-Windows sudo rule was invalid and has been removed."
+        ((INSTALL_FAILURES += 1))
+    fi
+
+    # Launcher entry, so it is also found from the Apps (drun) view. Written
+    # here rather than shipped because Exec needs an absolute path.
+    local applications="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    mkdir -p "$applications"
+    cat >"$applications/reboot-windows.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Reboot to Windows
+Comment=Boot Windows once via UEFI BootNext; the next reboot returns to Arch
+Icon=distributor-logo-windows
+Exec=$CONFIG_DIR/hypr/scripts/reboot-windows.sh
+Terminal=false
+Categories=System;
+Keywords=windows;reboot;dual;boot;bitlocker;
+EOF
+
+    success "reboot-to-Windows installed."
 }
 
 configure_desktop() {
@@ -818,16 +940,45 @@ configure_desktop() {
         xdg-settings set default-web-browser "$zen_desktop" >/dev/null 2>&1 || true
     fi
 
+    # Start on the wallpaper-derived dark theme with the default wallpaper.
+    # A wallpaper chosen on a previous install is kept.
+    local wallpaper_state="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-wallpaper"
+    local default_wallpaper="$HOME/Pictures/Wallpapers/wallpaper-19.jpg"
+    if [[ ! -r "$wallpaper_state" && -f "$default_wallpaper" ]]; then
+        mkdir -p "$(dirname "$wallpaper_state")"
+        printf '%s\n' "$default_wallpaper" >"$wallpaper_state"
+    fi
+
     if [[ -x "$CONFIG_DIR/themes/apply.sh" ]]; then
-        "$CONFIG_DIR/themes/apply.sh" monochrome-dark || warning "Initial theme application failed."
+        "$CONFIG_DIR/themes/apply.sh" wallpaper-dark || warning "Initial theme application failed."
+    fi
+}
+
+install_workspace_overview() {
+    local installer="$CONFIG_DIR/hypr/scripts/install-hyprexpo.sh"
+
+    if [[ ! -x "$installer" ]]; then
+        warning "The HyprExpo installer is missing: $installer"
+        ((INSTALL_FAILURES += 1))
+        return
+    fi
+
+    info "Building the workspace overview for the installed Hyprland revision..."
+    if "$installer"; then
+        success "HyprExpo workspace overview installed."
+    else
+        warning "HyprExpo could not be built for this Hyprland revision."
+        ((INSTALL_FAILURES += 1))
     fi
 }
 
 setup_nvchad() {
     local nvim_dir="$CONFIG_DIR/nvim"
 
+    # The repository ships its own NvChad configuration; the starter clone is
+    # only a fallback for a checkout without one.
     if [[ -e "$nvim_dir" || -L "$nvim_dir" ]]; then
-        warning "Neovim configuration already exists; NvChad bootstrap was skipped: $nvim_dir"
+        info "Neovim (NvChad) configuration is in place: $nvim_dir"
         return
     fi
 
@@ -837,6 +988,35 @@ setup_nvchad() {
         success "NvChad starter installed."
     else
         warning "NvChad starter could not be cloned."
+        ((INSTALL_FAILURES += 1))
+    fi
+}
+
+setup_doom_emacs() {
+    local emacs_dir="$CONFIG_DIR/emacs"
+
+    if ! command -v emacs >/dev/null 2>&1; then
+        warning "Emacs is not installed; Doom Emacs was skipped."
+        ((INSTALL_FAILURES += 1))
+        return
+    fi
+
+    # Doom itself is cloned; the personal configuration in ~/.config/doom
+    # comes from this repository.
+    if [[ ! -x "$emacs_dir/bin/doom" ]]; then
+        info "Cloning Doom Emacs..."
+        if ! git clone --depth 1 https://github.com/doomemacs/doomemacs "$emacs_dir"; then
+            warning "Doom Emacs could not be cloned."
+            ((INSTALL_FAILURES += 1))
+            return
+        fi
+    fi
+
+    info "Installing Doom Emacs packages (this takes a while)..."
+    if "$emacs_dir/bin/doom" install --no-config --force; then
+        success "Doom Emacs installed."
+    else
+        warning "doom install failed; run ~/.config/emacs/bin/doom sync later."
         ((INSTALL_FAILURES += 1))
     fi
 }
@@ -879,10 +1059,12 @@ verify_install() {
     info "Verifying required commands..."
 
     verify_command "Hyprland" Hyprland
+    verify_command "Hyprland plugins" hyprpm
     verify_command "Waybar" waybar
     verify_command "Rofi" rofi
     verify_command "Quickshell" quickshell
     verify_command "Hyprlock" hyprlock
+    verify_command "Idle manager" hypridle
     verify_command "Wlogout" wlogout
     verify_command "Zen Browser" zen-browser
     verify_command "Brave" brave
@@ -921,11 +1103,27 @@ verify_install() {
     verify_command "Zsh" zsh
     verify_command "Starship" starship
     verify_command "Clipboard history" cliphist
+    verify_command "Screen recorder" wf-recorder
+    verify_command "Screenshot editor" swappy
+    verify_command "Color picker" hyprpicker
+    verify_command "OCR" tesseract
+    verify_command "Calculator" qalc
+    verify_command "Emoji picker" rofimoji
+    verify_command "Display editor" nwg-displays
+    verify_command "Update checker" checkupdates
+    verify_command "Credential service" gnome-keyring-daemon
     verify_command "Wallpaper daemon" awww
     verify_command "Wallpaper colors" matugen
     verify_command "Notifications" dunst
     verify_command "HyprMod" hyprmod
     verify_command "Power profiles" powerprofilesctl
+
+    if [[ -x "$HOME/.local/lib/hyprland-plugins/hyprexpo.so" ]]; then
+        printf '  %-22s OK\n' "Workspace overview"
+    else
+        printf '  %-22s MISSING\n' "Workspace overview"
+        ((VERIFY_FAILURES += 1))
+    fi
 
     if [[ -n "$NVIDIA_PCI_ADDRESS" ]]; then
         verify_command "NVIDIA utility" nvidia-smi
@@ -998,7 +1196,8 @@ print_summary() {
     printf 'Configuration: %s\n' "$CONFIG_DIR"
     printf 'Deployment:    copy\n'
     printf 'Browser:       Zen Browser\n'
-    printf 'Theme:         monochrome-dark\n'
+    printf 'Theme:         wallpaper-dark\n'
+    printf 'Login screen:  SDDM (SilentSDDM, nord)\n'
     printf 'Shortcut GUI:  HyprMod (Super + /)\n'
     printf 'Power manager: power-profiles-daemon%s\n' \
         "$([[ "$CPU_VENDOR" == "GenuineIntel" ]] && printf ' + thermald')"
@@ -1020,12 +1219,8 @@ print_summary() {
 
     printf '\nNext steps:\n'
     printf '  1. Start nvim, wait for plugins, then run :MasonInstallAll and :TSInstallAll.\n'
-    if [[ -n "$NVIDIA_DRIVER_PACKAGE" ]]; then
-        printf '  2. Reboot so the NVIDIA kernel module and stable DRM aliases are active.\n'
-        printf '  3. Start Hyprland; display detection will finish automatically.\n'
-    else
-        printf '  2. Start Hyprland; display detection will finish automatically.\n'
-    fi
+    printf '  2. Reboot. At the SDDM login screen choose the "Hyprland (uwsm-managed)" session;\n'
+    printf '     SDDM remembers it afterwards. Display detection finishes on first launch.\n'
 
     if (( INSTALL_FAILURES > 0 || VERIFY_FAILURES > 0 )); then
         warning "Installation completed with $INSTALL_FAILURES installation issue(s) and $VERIFY_FAILURES verification failure(s)."
@@ -1049,14 +1244,18 @@ main() {
         "Installing packages:install_packages"
         "Backing up existing configuration:backup_existing_configs"
         "Installing dotfiles:install_dotfiles"
+        "Building workspace overview:install_workspace_overview"
         "Preparing HyprMod:prepare_hyprmod_config"
         "Configuring graphics:configure_graphics"
         "Installing wallpapers:install_wallpapers"
         "Enabling services:configure_services"
+        "Configuring the login screen:configure_login"
         "Configuring power management:configure_power"
         "Configuring the desktop:configure_desktop"
+        "Setting up reboot-to-Windows:configure_windows_reboot"
         "Setting up development tools:setup_development_tools"
         "Installing NvChad:setup_nvchad"
+        "Installing Doom Emacs:setup_doom_emacs"
         "Verifying the installation:verify_install"
     )
 

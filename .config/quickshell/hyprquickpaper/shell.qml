@@ -3,7 +3,6 @@ import Quickshell.Io
 import QtQuick
 import Qt.labs.folderlistmodel
 import Quickshell.Wayland
-import "../common"
 
 PanelWindow {
     id: main
@@ -59,7 +58,7 @@ PanelWindow {
 
         folder: "file://" + main.homeDir + "/" + configs.wallpaper_path
         showDirs: false
-        nameFilters: ["*.png", "*.jpg"]
+        nameFilters: ["*.png", "*.jpg", "*.jpeg", "*.webp", "*.PNG", "*.JPG", "*.JPEG", "*.WEBP"]
         sortField: FolderListModel.Name
     }
 
@@ -154,13 +153,13 @@ PanelWindow {
                        (main.zoomScale - main.edgeScale) * t
             }
 
-            width: baseWidth * scaleFactor
+            width: baseWidth
 
             Item {
                 id: content
 
                 anchors.centerIn: parent
-                width: parent.width
+                width: delegateItem.baseWidth * delegateItem.scaleFactor
                 height: delegateItem.height *
                         Math.min(1, delegateItem.scaleFactor)
 
@@ -257,12 +256,22 @@ PanelWindow {
 
         Keys.onPressed: function(event) {
             switch (event.key) {
+            case Qt.Key_Left:
+            case Qt.Key_Up:
+                moveSelection(-1, 1)
+                break
+            case Qt.Key_Right:
+            case Qt.Key_Down:
+                moveSelection(1, 1)
+                break
             case Qt.Key_Space:
+            case Qt.Key_Return:
+            case Qt.Key_Enter:
                 activateCurrent()
                 break
             case Qt.Key_W:
                 Qt.quit()
-                break    
+                break
             case Qt.Key_Escape:
                 Qt.quit()
                 break

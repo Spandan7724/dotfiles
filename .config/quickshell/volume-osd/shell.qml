@@ -3,7 +3,6 @@ import Quickshell
 import Quickshell.Services.Pipewire
 import Quickshell.Wayland
 import QtQuick
-import "../common"
 
 PanelWindow {
     id: root

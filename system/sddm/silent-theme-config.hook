@@ -1,0 +1,12 @@
+# Package upgrades replace metadata.desktop and reset SilentSDDM to its default
+# look, so re-select the nord variant after every install or upgrade.
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = sddm-silent-theme
+
+[Action]
+Description = Selecting the SilentSDDM nord variant...
+When = PostTransaction
+Exec = /usr/bin/sed -i -E -e "s|^ConfigFile=|# ConfigFile=|" -e "s|^# ConfigFile=configs/nord.conf$|ConfigFile=configs/nord.conf|" /usr/share/sddm/themes/silent/metadata.desktop

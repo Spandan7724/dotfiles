@@ -1,82 +1,197 @@
-@import "../themes/current/waybar.css";
 @import "colors.css";
+@import "../themes/current/waybar.css";
 
-/* General */
 * {
+    min-height: 0;
+    border: none;
+    border-radius: 0;
     font-family: "JetBrainsMono Nerd Font", "Symbols Nerd Font Mono", monospace;
     font-size: 11px;
-    min-height: 0;
+    font-weight: 600;
 }
 
 window#waybar {
-    min-height: 10px;
-    background-color: rgba(20, 20, 20, 0);
+    background: transparent;
     color: @foreground;
 }
 
-/* LEFT */
-.modules-left {
-    background-color: @bar_bg;
-    border-radius: 10px;
-    margin: 4px 0 2px 6px;
-}
-
-/* CENTER */
-.modules-center {
-    background-color: @bar_bg;
-    border-radius: 10px;
-    margin: 4px 0 2px;
-}
-
-/* RIGHT */
+.modules-left,
+.modules-center,
 .modules-right {
-    background-color: @bar_bg;
-    border-radius: 10px;
-    margin: 4px 6px 2px 0;
+    min-height: 30px;
+    border: 1px solid alpha(@foreground, 0.10);
+    border-radius: 11px;
+    background: @bar_bg;
+    box-shadow: 0 3px 12px alpha(#000000, 0.28);
 }
 
-/* Module spacing */
+.modules-left {
+    padding-left: 3px;
+    padding-right: 4px;
+}
+
+.modules-center {
+    padding: 0 4px;
+}
+
+.modules-right {
+    padding-left: 4px;
+    padding-right: 3px;
+}
+
+#custom-launcher,
+#custom-search,
+#custom-tray,
+#custom-settings,
+#custom-power,
+#custom-system,
+#custom-nightlight,
+#custom-notifications,
+#custom-updates,
+#custom-media,
+#window,
+#clock,
+#tray,
+#network,
+#bluetooth,
+#backlight,
+#pulseaudio,
+#privacy,
+#idle_inhibitor,
 #cpu,
 #memory,
-#clock,
-#pulseaudio,
-#custom-mpris-marquee,
-#custom-power,
-#battery,
+#temperature,
+#disk,
 #power-profiles-daemon,
-#temperature {
-    padding: 0 10px;
-    margin: 0 2px;
-}
-
-/* Power */
-#custom-power {
+#battery {
+    padding: 0 8px;
+    margin: 3px 1px;
+    border-radius: 8px;
     color: @foreground;
-    font-size: 15px;
-    margin-right: 10px;
+    background: transparent;
+    transition: background-color 140ms ease, color 140ms ease;
 }
 
-/* MPRIS */
-#custom-mpris-marquee {
-    padding: 0 10px;
+#custom-launcher {
+    min-width: 20px;
+    padding: 0 9px;
+    font-size: 17px;
 }
 
-/* Clock */
+#custom-search {
+    min-width: 86px;
+    color: @muted;
+}
+
+#window {
+    color: @muted;
+    font-weight: 500;
+}
+
+#custom-media {
+    color: @muted;
+    font-weight: 500;
+}
+
+#custom-media.playing {
+    color: @foreground;
+}
+
+#workspaces {
+    margin: 3px 2px;
+    padding: 0 3px;
+    border-radius: 8px;
+    background: alpha(@foreground, 0.045);
+}
+
+#workspaces button {
+    min-width: 15px;
+    min-height: 22px;
+    margin: 1px;
+    padding: 0 4px;
+    border-radius: 7px;
+    color: alpha(@muted, 0.72);
+    background: transparent;
+    box-shadow: none;
+    transition: min-width 160ms ease, color 140ms ease, background-color 140ms ease;
+}
+
+#workspaces button.empty {
+    color: alpha(@muted, 0.42);
+}
+
+#workspaces button.visible {
+    color: @foreground;
+}
+
+#workspaces button.active {
+    min-width: 26px;
+    color: @bar_bg;
+    background: @foreground;
+}
+
+#workspaces button.urgent {
+    color: @bar_bg;
+    background: @critical;
+}
+
+#workspaces button.special {
+    color: @foreground;
+    border-bottom: 1px solid @foreground;
+}
+
 #clock {
-    font-weight: bold;
+    min-width: 143px;
+    font-weight: 700;
 }
 
-/* Temperature */
-#temperature.critical {
+#network,
+#custom-tray,
+#custom-system,
+#custom-notifications,
+#custom-settings {
+    min-width: 16px;
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: 14px;
+}
+
+#privacy-item.screenshare,
+#privacy-item.audio-in {
     color: @critical;
 }
 
-/* Battery */
+#network.disconnected,
+#network.disabled,
+#bluetooth.disabled,
+#bluetooth.off,
+#pulseaudio.muted,
+#pulseaudio.microphone.source-muted,
+#custom-nightlight.disabled,
+#idle_inhibitor.deactivated {
+    color: @muted;
+}
+
+#idle_inhibitor.activated,
+#custom-nightlight.enabled,
+#custom-notifications.unread,
+#custom-updates.pending,
+#power-profiles-daemon.performance {
+    color: @hover;
+    background: alpha(@foreground, 0.10);
+}
+
+#custom-notifications.paused,
+#power-profiles-daemon.power-saver {
+    color: @muted;
+}
+
 #battery.warning:not(.charging) {
     color: @muted;
 }
 
-#battery.critical:not(.charging) {
+#battery.critical:not(.charging),
+#temperature.critical {
     color: @critical;
 }
 
@@ -85,50 +200,47 @@ window#waybar {
     color: @hover;
 }
 
-/* Power profile */
-#power-profiles-daemon.performance {
-    color: @hover;
+#custom-power {
+    color: @critical;
+    font-size: 15px;
 }
 
-#power-profiles-daemon.power-saver {
+#custom-launcher:hover,
+#custom-search:hover,
+#custom-tray:hover,
+#custom-settings:hover,
+#custom-power:hover,
+#custom-system:hover,
+#custom-nightlight:hover,
+#custom-notifications:hover,
+#custom-updates:hover,
+#network:hover,
+#bluetooth:hover,
+#backlight:hover,
+#pulseaudio:hover,
+#idle_inhibitor:hover,
+#power-profiles-daemon:hover,
+#battery:hover,
+#clock:hover,
+#custom-media:hover,
+#workspaces button:hover {
+    color: @hover;
+    background: alpha(@foreground, 0.12);
+}
+
+.drawer-child {
     color: @muted;
 }
 
-/* Tooltip */
 tooltip {
-    background-color: @tooltip_bg;
-    color: @foreground;
-    font-weight: bold;
-    border: 1px solid rgba(255, 255, 255, 0);
+    border: 1px solid alpha(@foreground, 0.15);
     border-radius: 10px;
+    background: @tooltip_bg;
+    color: @foreground;
 }
 
 tooltip label {
+    padding: 7px;
     color: @foreground;
-    font-size: 13px;
-    padding: 0;
-    margin: 0;
-}
-
-/* Interactive hover effect */
-#cpu,
-#memory,
-#temperature,
-#clock,
-#pulseaudio,
-#battery,
-#power-profiles-daemon,
-#custom-mpris-marquee {
-    transition: font-size 0.15s ease;
-}
-
-#cpu:hover,
-#memory:hover,
-#temperature:hover,
-#clock:hover,
-#pulseaudio:hover,
-#battery:hover,
-#power-profiles-daemon:hover,
-#custom-mpris-marquee:hover {
-    font-size: 13px;
+    font-size: 12px;
 }

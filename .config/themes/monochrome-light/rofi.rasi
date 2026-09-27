@@ -1,6 +1,6 @@
 * {
-    bg: #f4f4f4e8;
-    bg-alt: #ffffff00;
+    bg: #f4f4f4f5;
+    bg-alt: #fffffff2;
     bg-hover: #dededeff;
     bg-selected: #00000012;
     fg: #151515ff;
@@ -9,5 +9,5 @@
     accent: #000000ff;
     accent-soft: #00000022;
     urgent: #b00020ff;
-    border-color: #00000000;
+    border-color: #00000024;
 }

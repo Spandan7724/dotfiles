@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+profile="${1:-}"
+
+case "$profile" in
+    power-saver) platform=low-power; requested_watts=55 ;;
+    balanced) platform=balanced; requested_watts=80 ;;
+    performance) platform=max-power; requested_watts=130 ;;
+    *) printf 'Usage: %s <power-saver|balanced|performance>\n' "$0" >&2; exit 2 ;;
+esac
+
+platform_file=/sys/firmware/acpi/platform_profile
+choices_file=/sys/firmware/acpi/platform_profile_choices
+if [[ -w "$platform_file" && -r "$choices_file" ]] && grep -qw "$platform" "$choices_file"; then
+    printf '%s' "$platform" >"$platform_file"
+fi
+
+# Dynamic Boost is useful in balanced and performance modes because it shifts
+# the shared CPU/GPU budget with load. Keep power saver at a strict 55 W cap.
+if systemctl list-unit-files nvidia-powerd.service >/dev/null 2>&1; then
+    if [[ "$profile" == power-saver ]]; then
+        systemctl stop nvidia-powerd.service || true
+    else
+        systemctl start nvidia-powerd.service || true
+    fi
+fi
+
+if command -v nvidia-smi >/dev/null 2>&1; then
+    mapfile -t gpu_indexes < <(nvidia-smi --query-gpu=index --format=csv,noheader,nounits 2>/dev/null || true)
+    for gpu in "${gpu_indexes[@]}"; do
+        [[ "$gpu" =~ ^[0-9]+$ ]] || continue
+        max_watts="$(nvidia-smi -i "$gpu" --query-gpu=power.max_limit --format=csv,noheader,nounits 2>/dev/null | awk '{printf "%d", $1}')"
+        min_watts="$(nvidia-smi -i "$gpu" --query-gpu=power.min_limit --format=csv,noheader,nounits 2>/dev/null | awk '{printf "%d", $1}')"
+        target="$requested_watts"
+        [[ "$max_watts" =~ ^[0-9]+$ && "$target" -gt "$max_watts" ]] && target="$max_watts"
+        [[ "$min_watts" =~ ^[0-9]+$ && "$target" -lt "$min_watts" ]] && target="$min_watts"
+        nvidia-smi -i "$gpu" --power-limit="$target" >/dev/null
+    done
+fi

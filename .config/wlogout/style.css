@@ -2,11 +2,11 @@
  * Docs: https://github.com/ArtsyMacaw/wlogout
  *
  * wlogout renders with GTK, so it takes the same @import + @define-color
- * approach as Waybar: the theme profile first, then the Matugen palette.
- * Launched as a single-monitor vertical menu with display-safe margins.
+ * approach as Waybar: the Matugen palette first, then the theme profile.
+ * Named themes win; Wallpaper Dark/Light leave the generated palette active.
  */
-@import "../themes/current/wlogout.css";
 @import "colors.css";
+@import "../themes/current/wlogout.css";
 
 * {
     background-image: none;

@@ -1,0 +1,6 @@
+@define-color wlogout_scrim rgba(14, 14, 20, 0.48);
+@define-color wlogout_button_bg rgba(26, 27, 38, 0.90);
+@define-color wlogout_button_hover rgba(122, 162, 247, 0.25);
+@define-color wlogout_border rgba(122, 162, 247, 0.50);
+@define-color wlogout_accent #7aa2f7;
+@define-color wlogout_fg #c0caf5;

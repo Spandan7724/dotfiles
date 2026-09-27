@@ -1,29 +1,43 @@
-@import "../themes/current/rofi.rasi"
 @import "colors.rasi"
+@import "../themes/current/rofi.rasi"
 
 configuration {
     modes: "combi";
     combi-modes: "window,run,drun";
     drun-display-format: "{name}";
     window-format: "{t:45}  ·  {c}";
-    font: "Iosevka 13";
+    font: "Iosevka Nerd Font Mono 13";
+    icon-theme: "Papirus";
 
     location: 0;
     fixed-num-lines: true;
     show-icons: true;
     sidebar-mode: false;
     scroll-method: 1;
-    matching: "prefix";
+
+    /* Substring matching per token. "prefix" only ever matched the start of a
+       word, so "paper" never found "wallpaper". "fuzzy" went too far the other
+       way: matching scattered letters across the hidden keyword column made
+       almost every row match almost every query, so "idle" buried the one row
+       that actually says idle under rows that merely contain i, d, l and e. */
+    matching: "normal";
+    tokenize: true;
     sort: true;
-    sorting-method: "normal";
+    sorting-method: "fzf";
+
     click-to-exit: true;
     combi-hide-mode-prefix: true;
 
-    display-run: "";
+    /* A single left click activates the row. The default only moved the
+       highlight, so clicking an entry appeared to do nothing. */
+    me-select-entry: "";
+    me-accept-entry: "MousePrimary";
+
+    display-run: "";
     display-window: "󰖯";
-    display-drun: "";
+    display-drun: "󰀻";
     display-combi: "󰘔";
-    display-ssh: "";
+    display-ssh: "";
 }
 
 * {
@@ -36,72 +50,74 @@ configuration {
 
 window {
     location: center;
-    width: 420px;
-    height: 420px;
+    width: 460px;
     background-color: @bg;
-    border: 2px;
+    border: 1px;
     border-color: @border-color;
-    border-radius: 18px;
-    padding: 10;
+    /* Radii track Hyprland's decoration:rounding so a rofi card reads as part
+       of the same desktop rather than a widget dropped on top of it. */
+    border-radius: 12px;
+    padding: 16px;
 }
 
 mainbox {
     orientation: vertical;
     background-color: transparent;
     spacing: 12px;
+    children: [inputbar, listview];
 }
 
 inputbar {
-    background-color: @bg-alt;
-    border: 1px;
-    border-color: @border-color;
-    border-radius: 12px;
-    padding: 5px 15px;
-    spacing: 12px;
+    background-color: transparent;
+    border: 0;
+    padding: 0 4px;
+    spacing: 8px;
     children: [prompt, entry];
 }
 
 prompt {
     enabled: true;
     background-color: transparent;
-    text-color: @accent;
-    font: "Iosevka Nerd Font 16";
-    padding: 0;
+    text-color: @fg-muted;
+    font: "Iosevka Nerd Font Mono 13";
     vertical-align: 0.5;
 }
 
 entry {
     background-color: transparent;
     text-color: @fg;
-    font: "Iosevka 14";
-    placeholder: "";
+    font: "Iosevka Nerd Font Mono 13";
+    placeholder: "Type to search";
     placeholder-color: @fg-muted;
-    padding: 0;
+    cursor: text;
     vertical-align: 0.5;
-    horizontal-align: 0.5;
 }
 
 listview {
     background-color: transparent;
     border: 0;
-    spacing: 6px;
-    padding: 4px 0;
-    lines: 8;
+    spacing: 2px;
+    lines: 9;
     columns: 1;
-    fixed-height: true;
-    scrollbar: false;
+    fixed-height: false;
+    dynamic: true;
+    scrollbar: true;
+    cycle: true;
 }
 
 element {
     background-color: transparent;
-    border: 0;
-    border-radius: 10px;
-    padding: 10px 14px;
-    spacing: 14px;
+    /* Every row carries the edge so nothing shifts when it lights up. */
+    border: 1px;
+    border-color: transparent;
+    border-radius: 8px;
+    padding: 8px 12px;
+    spacing: 12px;
+    cursor: pointer;
 }
 
 element-icon {
-    size: 28px;
+    size: 24px;
     background-color: transparent;
     vertical-align: 0.5;
 }
@@ -110,7 +126,7 @@ element-text {
     background-color: transparent;
     text-color: inherit;
     vertical-align: 0.5;
-    font: "Iosevka 11";
+    font: "Iosevka Nerd Font Mono 12";
 }
 
 element normal.normal,
@@ -131,21 +147,26 @@ element alternate.urgent {
     text-color: @urgent;
 }
 
+/* Selection reads as accent-on-tint. It used to paint @fg-dark on @bg-selected,
+   which on the themed palettes is background-coloured text on a barely-tinted
+   background, so the highlighted row was the hardest one to read. */
 element selected.normal,
 element selected.active {
-    background-color: @bg-selected;
-    text-color: @fg-dark;
+    background-color: @accent-soft;
+    border-color: @accent;
+    text-color: @accent;
 }
 
 element selected.urgent {
     background-color: @urgent;
+    border-color: @urgent;
     text-color: @fg-dark;
 }
 
 message {
     background-color: transparent;
     border: 0;
-    padding: 4px 8px;
+    padding: 0 4px 2px;
     text-color: @fg-muted;
 }
 
@@ -166,9 +187,10 @@ button {
     text-color: @fg-muted;
     border: 1px;
     border-color: @border-color;
-    border-radius: 10px;
-    padding: 10px 14px;
+    border-radius: 8px;
+    padding: 8px 14px;
     margin: 2px;
+    cursor: pointer;
 }
 
 button selected {
@@ -178,10 +200,11 @@ button selected {
 }
 
 scrollbar {
-    width: 4px;
+    width: 3px;
     border: 0;
-    handle-color: @accent;
-    handle-width: 4px;
+    border-radius: 3px;
+    handle-color: @accent-soft;
+    handle-width: 3px;
     padding: 0;
 }
 

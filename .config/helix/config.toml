@@ -1,4 +1,5 @@
-theme = "current"
+
+theme = "gruvbox_dark_hard"
 
 [editor]
 line-number = "relative"
@@ -17,3 +18,4 @@ hidden = false
 
 [editor.lsp]
 display-inlay-hints = true
+

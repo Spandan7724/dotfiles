@@ -8,14 +8,6 @@ hl.layer_rule({
     ignore_alpha = 0.15,
 })
 
--- Floating is the default desktop behavior. Fullscreen remains available and
--- individual applications can opt back into tiling with a later rule.
-hl.window_rule({
-    name = "float-by-default",
-    match = { class = ".*" },
-    float = true,
-})
-
 -- Opacity rules: 90% for all windows except fullscreen
 hl.window_rule({
     match = { class = ".*" },
@@ -55,4 +47,52 @@ hl.window_rule({
     name = "float-save-file",
     match = { title = "^(Save File)$" },
     float = true,
+})
+
+hl.window_rule({
+    name = "picture-in-picture",
+    match = { title = "^([Pp]icture[- ]in[- ][Pp]icture)$" },
+    float = true,
+    pin = true,
+    keep_aspect_ratio = true,
+    size = { "(monitor_w*0.32)", "(monitor_h*0.32)" },
+    move = { "(monitor_w-window_w-20)", "45" },
+})
+
+hl.window_rule({
+    name = "dropdown-terminal",
+    match = { class = "^(dropdown-terminal)$" },
+    float = true,
+    center = true,
+    size = { "(monitor_w*0.72)", "(monitor_h*0.62)" },
+})
+
+hl.window_rule({
+    name = "float-system-monitor",
+    match = { class = "^(dotfiles-btop)$" },
+    float = true,
+    center = true,
+    size = { "(monitor_w*0.78)", "(monitor_h*0.75)" },
+})
+
+hl.window_rule({
+    name = "float-system-update",
+    match = { class = "^(dotfiles-update)$" },
+    float = true,
+    center = true,
+    size = { "(monitor_w*0.78)", "(monitor_h*0.75)" },
+})
+
+hl.window_rule({
+    name = "float-desktop-tools",
+    match = { class = "^(dotfiles-packages|dotfiles-transcode|dotfiles-security|dotfiles-defaults)$" },
+    float = true,
+    center = true,
+    size = { "(monitor_w*0.80)", "(monitor_h*0.78)" },
+})
+
+hl.window_rule({
+    name = "idle-inhibit-video",
+    match = { class = "^(mpv|zen|zen-browser|Brave-browser|brave-browser)$" },
+    idle_inhibit = "fullscreen",
 })

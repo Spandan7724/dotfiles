@@ -1,119 +1,280 @@
 -- ~/.config/hypr/keybinds.lua
--- Migrated from keybinds.conf
--- Docs: https://wiki.hypr.land/Configuring/Basics/Binds/
---       https://wiki.hypr.land/Configuring/Basics/Dispatchers/
+-- Hyprland 0.56 Lua dispatcher API:
+-- https://wiki.hypr.land/Configuring/Basics/Dispatchers/
 
 local home = os.getenv("HOME")
+local scripts = home .. "/.config/hypr/scripts"
 
--- Launchers
-hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal))
-hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("pgrep -x rofi >/dev/null && pkill -x rofi || " .. menu))
-hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
-hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(browser))
+local function bind(keys, dispatcher, description, options)
+    options = options or {}
+    options.description = description
+    hl.bind(keys, dispatcher, options)
+end
 
-hl.bind(mainMod .. " + Q", hl.dsp.window.close())
-hl.bind("SUPER + Tab", hl.dsp.exec_cmd("hyprlock"))
-hl.bind(mainMod .. " + GRAVE", hl.dsp.exec_cmd("pgrep -x wlogout >/dev/null || wlogout -b 1 -c 20 -r 20 -m 80 -n --protocol layer-shell"))
-hl.bind(mainMod .. " + W", hl.dsp.exec_cmd("quickshell -n -c hyprquickpaper"))
-hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd(home .. "/.config/themes/picker.sh"))
-hl.bind(mainMod .. " + slash", hl.dsp.exec_cmd("hyprmod"))
+local function launch(command)
+    return hl.dsp.exec_cmd(command)
+end
 
-hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen({ mode = 0 }))
+-- Launchers and desktop panels
+bind(mainMod .. " + T", launch(scripts .. "/default-launcher.sh terminal"), "Open default terminal")
+bind(mainMod .. " + D", launch(scripts .. "/apps-menu.sh"), "Open applications menu")
+bind(mainMod .. " + E", launch(scripts .. "/default-launcher.sh file-manager"), "Open default file manager")
+bind(mainMod .. " + B", launch(scripts .. "/default-launcher.sh browser"), "Open default browser")
+bind(mainMod .. " + X", launch(scripts .. "/control-center.sh"), "Open quick settings")
+bind(mainMod .. " + F1", launch(scripts .. "/keybinds.sh"), "Show keyboard shortcuts")
+bind(mainMod .. " + F2", launch(scripts .. "/desktop-menu.sh"), "Open desktop control menu")
+bind(mainMod .. " + ALT + Space", launch(scripts .. "/desktop-menu.sh"), "Open desktop control menu")
+bind(mainMod .. " + Escape", launch(scripts .. "/desktop-menu.sh"), "Open desktop control menu")
+bind(mainMod .. " + slash", launch(scripts .. "/keybinds.sh"), "Search keyboard shortcuts")
+bind(mainMod .. " + SHIFT + slash", launch(scripts .. "/hyprmod-launch.sh"), "Open advanced Hyprland settings")
+bind(mainMod .. " + A", launch("pavucontrol"), "Open audio settings")
+bind(mainMod .. " + SHIFT + B", launch(terminal .. " --class dotfiles-btop -e btop"), "Open system monitor")
+bind(mainMod .. " + R", launch(scripts .. "/file-search.sh"), "Search files")
+bind(mainMod .. " + SHIFT + D", launch(scripts .. "/web-search.sh"), "Search the web")
+bind(mainMod .. " + equal", launch(scripts .. "/calculator.sh"), "Open calculator")
+bind(mainMod .. " + semicolon", launch("rofimoji --action copy"), "Choose emoji or symbol")
+bind(mainMod .. " + CTRL + W", launch("nm-connection-editor"), "Open Wi-Fi and network settings")
+bind(mainMod .. " + CTRL + B", launch("blueman-manager"), "Open Bluetooth settings")
 
-hl.bind(mainMod .. " + O", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/opacity.sh"))
+-- Session and window state
+bind(mainMod .. " + Q", hl.dsp.window.close(), "Close active window")
+bind(mainMod .. " + SHIFT + Q", hl.dsp.window.kill(), "Force-kill active window")
+bind(mainMod .. " + L", launch("hyprlock"), "Lock session")
+bind(mainMod .. " + GRAVE", launch(scripts .. "/power-menu.sh"), "Open power and session menu")
+bind(mainMod .. " + SHIFT + E", hl.dsp.exit(), "Exit Hyprland")
+bind(mainMod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }), "Toggle fullscreen")
+bind(mainMod .. " + M", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }), "Toggle maximize")
+bind(mainMod .. " + Space", hl.dsp.window.float({ action = "toggle" }), "Toggle floating")
+bind(mainMod .. " + C", hl.dsp.window.center(), "Center floating window")
+bind(mainMod .. " + P", hl.dsp.window.pseudo({ action = "toggle" }), "Toggle pseudotile")
+bind(mainMod .. " + SHIFT + P", hl.dsp.window.pin({ action = "toggle" }), "Pin floating window")
+bind(mainMod .. " + backslash", hl.dsp.layout("togglesplit"), "Toggle dwindle split direction")
+bind(mainMod .. " + SHIFT + backslash", hl.dsp.layout("swapsplit"), "Swap the two halves of the current split")
+bind(mainMod .. " + SHIFT + minus", hl.dsp.layout("splitratio -0.05"), "Shrink current split", { repeating = true })
+bind(mainMod .. " + SHIFT + equal", hl.dsp.layout("splitratio +0.05"), "Grow current split", { repeating = true })
+local opacity_steps = { 1.0, 0.9, 0.8, 0.7 }
+local opacity_index = {}
 
--- Mouse move/resize window
-hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
-hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
+bind(mainMod .. " + O", function()
+    local window = hl.get_active_window()
+    if window == nil then
+        return
+    end
 
--- Toggle waybar
-hl.bind(mainMod .. " + SHIFT + W", hl.dsp.exec_cmd("sh -c 'pgrep -x waybar >/dev/null && pkill waybar || nohup waybar >/dev/null 2>&1 &'"))
+    local next_index = (opacity_index[window.address] or 1) + 1
+    if next_index > #opacity_steps then
+        next_index = 1
+    end
+    opacity_index[window.address] = next_index
+    hl.dispatch(hl.dsp.window.set_prop({
+        prop = "opacity",
+        value = tostring(opacity_steps[next_index]) .. " override",
+    }))
+end, "Cycle active-window opacity")
 
--- Clipboard
-hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("pgrep -x rofi >/dev/null && pkill -x rofi || cliphist list | rofi -dmenu -p '' | cliphist decode | wl-copy"))
+-- Mouse move and resize. These also rearrange and resize tiled windows.
+bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), "Move or rearrange window", { mouse = true })
+bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), "Resize window", { mouse = true })
+bind(mainMod .. " + SHIFT + mouse:273", hl.dsp.window.resize({ keep_aspect_ratio = true }), "Resize window with aspect ratio", { mouse = true })
 
--- Screenshots
-hl.bind(mainMod .. " + Delete", hl.dsp.exec_cmd("grim " .. home .. "/Pictures/$(date +%s).png"))
-hl.bind("Delete", hl.dsp.exec_cmd('grim -g "$(slurp)" ' .. home .. '/Pictures/$(date +%s).png'))
+bind(mainMod .. " + SHIFT + Space", function()
+    local workspace = hl.get_active_workspace()
+    if workspace == nil then
+        return
+    end
 
--- Brightness
-hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl set 5%+"), { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 5%-"), { locked = true, repeating = true })
-
--- Toggle float window, center and rezise
-hl.bind(mainMod .. " + Space", function()
-    hl.dispatch(hl.dsp.window.float({ action = "toggle" }))
-
-    local w = hl.get_active_window()
-    if w ~= nil and w.floating then
-        local mon = hl.get_active_monitor()
-        if mon ~= nil then
-            local target_w = math.floor(mon.width * 0.7) 
-            local target_h = math.floor(mon.height * 0.7)
-
-            -- absolute resize (relative = false), not a delta
-            hl.dispatch(hl.dsp.window.resize({ x = target_w, y = target_h, relative = false }))
-
-            local mon_x = mon.x or 0
-            local mon_y = mon.y or 0
-            local target_x = mon_x + math.floor((mon.width - target_w) / 2)
-            local target_y = mon_y + math.floor((mon.height - target_h) / 2)
-
-            -- absolute move to the centered position
-            hl.dispatch(hl.dsp.window.move({ x = target_x, y = target_y, relative = false }))
+    local windows = hl.get_workspace_windows(workspace)
+    local action = "disable"
+    for _, window in ipairs(windows) do
+        if not window.floating then
+            action = "enable"
+            break
         end
     end
-end)
 
--- Zoom
-local function zoomfunction(value)
-    local zoomvalue = hl.get_config("cursor.zoom_factor")
-    if (zoomvalue + value) > 1.5 then
-        hl.config({ cursor = { zoom_factor = 1.5 } })
-    elseif (zoomvalue + value) < 1.0 then
-        hl.config({ cursor = { zoom_factor = 1.0 } })
-    else
-        hl.config({ cursor = { zoom_factor = zoomvalue + value } })
+    for _, window in ipairs(windows) do
+        hl.dispatch(hl.dsp.window.float({ action = action, window = window }))
+    end
+end, "Toggle all workspace windows floating or tiled")
+
+-- Focus, move, swap, and resize using arrow keys.
+local directions = {
+    left = "l",
+    right = "r",
+    up = "u",
+    down = "d",
+}
+
+for key, direction in pairs(directions) do
+    bind(mainMod .. " + " .. key, hl.dsp.focus({ direction = direction }), "Focus window " .. key)
+    bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ direction = direction, group_aware = true }), "Move window " .. key)
+    bind(mainMod .. " + ALT + " .. key, hl.dsp.window.swap({ direction = direction }), "Swap tiled window " .. key)
+end
+
+bind(mainMod .. " + CTRL + left", hl.dsp.window.resize({ x = -40, y = 0, relative = true }), "Resize window narrower", { repeating = true })
+bind(mainMod .. " + CTRL + right", hl.dsp.window.resize({ x = 40, y = 0, relative = true }), "Resize window wider", { repeating = true })
+bind(mainMod .. " + CTRL + up", hl.dsp.window.resize({ x = 0, y = -40, relative = true }), "Resize window shorter", { repeating = true })
+bind(mainMod .. " + CTRL + down", hl.dsp.window.resize({ x = 0, y = 40, relative = true }), "Resize window taller", { repeating = true })
+
+for key, direction in pairs(directions) do
+    local dx = direction == "l" and -40 or direction == "r" and 40 or 0
+    local dy = direction == "u" and -40 or direction == "d" and 40 or 0
+    bind(mainMod .. " + CTRL + ALT + " .. key, hl.dsp.window.move({ x = dx, y = dy, relative = true }), "Move floating window " .. key, { repeating = true })
+end
+
+bind(mainMod .. " + CTRL + H", hl.dsp.layout("preselect l"), "Preselect next split left")
+bind(mainMod .. " + CTRL + L", hl.dsp.layout("preselect r"), "Preselect next split right")
+bind(mainMod .. " + CTRL + K", hl.dsp.layout("preselect u"), "Preselect next split up")
+bind(mainMod .. " + CTRL + J", hl.dsp.layout("preselect d"), "Preselect next split down")
+
+-- Floating-window placement. Positions use the active monitor's coordinates
+-- and leave room for Waybar and outer gaps.
+local function place_window(column, row, width_fraction, height_fraction)
+    return function()
+        local monitor = hl.get_active_monitor()
+        local window = hl.get_active_window()
+        if monitor == nil or window == nil then
+            return
+        end
+
+        hl.dispatch(hl.dsp.window.float({ action = "set" }))
+
+        local gap = 6
+        local top = 36
+        local usable_width = monitor.width - gap * 2
+        local usable_height = monitor.height - top - gap
+        local width = math.floor(usable_width * width_fraction)
+        local height = math.floor(usable_height * height_fraction)
+        local x = monitor.x + gap + math.floor((usable_width - width) * column)
+        local y = monitor.y + top + math.floor((usable_height - height) * row)
+
+        hl.dispatch(hl.dsp.window.resize({ x = width, y = height, relative = false }))
+        hl.dispatch(hl.dsp.window.move({ x = x, y = y, relative = false }))
     end
 end
-hl.bind(mainMod .. " + mouse_down", function() zoomfunction(-0.5) end, { repeating = true })
-hl.bind(mainMod .. " + mouse_up", function() zoomfunction(0.5) end, { repeating = true })
 
---# Zoom with keypad
-hl.bind(mainMod .. " + code:82", function() zoomfunction(-0.3) end, { repeating = true })
-hl.bind(mainMod .. " + code:86", function() zoomfunction(0.3) end, { repeating = true })
+bind(mainMod .. " + ALT + H", place_window(0, 0, 0.5, 1), "Place window on left half")
+bind(mainMod .. " + ALT + L", place_window(1, 0, 0.5, 1), "Place window on right half")
+bind(mainMod .. " + ALT + K", place_window(0, 0, 1, 0.5), "Place window on top half")
+bind(mainMod .. " + ALT + J", place_window(0, 1, 1, 0.5), "Place window on bottom half")
+bind(mainMod .. " + ALT + U", place_window(0, 0, 0.5, 0.5), "Place window in top-left corner")
+bind(mainMod .. " + ALT + I", place_window(1, 0, 0.5, 0.5), "Place window in top-right corner")
+bind(mainMod .. " + ALT + N", place_window(0, 1, 0.5, 0.5), "Place window in bottom-left corner")
+bind(mainMod .. " + ALT + comma", place_window(1, 1, 0.5, 0.5), "Place window in bottom-right corner")
 
-hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
+-- Window cycling and groups
+bind("ALT + Tab", hl.dsp.window.cycle_next({ next = true }), "Focus next window")
+bind("ALT + SHIFT + Tab", hl.dsp.window.cycle_next({ next = false }), "Focus previous window")
+bind(mainMod .. " + Tab", launch(scripts .. "/workspace-overview.sh toggle"), "Open workspace and window overview")
 
--- Focus (H/J/K/L = left/down/up/right, vim-style, matching your original)
-hl.bind(mainMod .. " + H", hl.dsp.focus({ direction = "left" }))
-hl.bind(mainMod .. " + J", hl.dsp.focus({ direction = "down" }))
-hl.bind(mainMod .. " + K", hl.dsp.focus({ direction = "up" }))
-hl.bind(mainMod .. " + L", hl.dsp.focus({ direction = "right" }))
+-- HyprExpo activates this submap while its overview is open. Arrow keys move
+-- between workspace previews, Enter selects one, and Escape closes the view.
+hl.define_submap("hyprexpo", function()
+    bind("left", function() hl.plugin.hyprexpo.kb_focus("left") end, "Overview: move left")
+    bind("right", function() hl.plugin.hyprexpo.kb_focus("right") end, "Overview: move right")
+    bind("up", function() hl.plugin.hyprexpo.kb_focus("up") end, "Overview: move up")
+    bind("down", function() hl.plugin.hyprexpo.kb_focus("down") end, "Overview: move down")
+    bind("h", function() hl.plugin.hyprexpo.kb_focus("left") end, "Overview: move left")
+    bind("l", function() hl.plugin.hyprexpo.kb_focus("right") end, "Overview: move right")
+    bind("k", function() hl.plugin.hyprexpo.kb_focus("up") end, "Overview: move up")
+    bind("j", function() hl.plugin.hyprexpo.kb_focus("down") end, "Overview: move down")
+    bind("return", function() hl.plugin.hyprexpo.kb_confirm() end, "Overview: select workspace")
+    bind("space", function() hl.plugin.hyprexpo.kb_confirm() end, "Overview: select workspace")
+    bind("escape", function() hl.plugin.hyprexpo.expo("cancel") end, "Overview: close")
+end)
+bind(mainMod .. " + G", hl.dsp.group.toggle(), "Toggle tabbed window group")
+local game_mode = false
+bind(mainMod .. " + CTRL + G", function()
+    game_mode = not game_mode
+    hl.config({
+        animations = { enabled = not game_mode },
+        decoration = {
+            blur = { enabled = not game_mode },
+            shadow = { enabled = not game_mode },
+        },
+    })
+    hl.notification.create({
+        text = game_mode and "Performance mode enabled" or "Performance mode disabled",
+        timeout = 2500,
+    })
+end, "Toggle performance mode")
+bind(mainMod .. " + bracketright", hl.dsp.group.next(), "Next window in group")
+bind(mainMod .. " + bracketleft", hl.dsp.group.prev(), "Previous window in group")
 
-hl.bind(mainMod .. " + SHIFT + H", hl.dsp.window.move({ direction = "left" }))
-hl.bind(mainMod .. " + SHIFT + J", hl.dsp.window.move({ direction = "down" }))
-hl.bind(mainMod .. " + SHIFT + K", hl.dsp.window.move({ direction = "up" }))
-hl.bind(mainMod .. " + SHIFT + L", hl.dsp.window.move({ direction = "right" }))
-
-hl.bind(mainMod .. " + CTRL + H", hl.dsp.window.resize({ x = -40, y = 0, relative = true }), { repeating = true })
-hl.bind(mainMod .. " + CTRL + L", hl.dsp.window.resize({ x = 40, y = 0, relative = true }), { repeating = true })
-hl.bind(mainMod .. " + CTRL + K", hl.dsp.window.resize({ x = 0, y = -40, relative = true }), { repeating = true })
-hl.bind(mainMod .. " + CTRL + J", hl.dsp.window.resize({ x = 0, y = 40, relative = true }), { repeating = true })
-
--- Workspaces 1-10, and move-to-workspace with SHIFT (confirmed pattern from
--- the official example config)
+-- Workspaces 1-10. Shift moves and follows; Ctrl moves silently.
 for i = 1, 10 do
-    local key = i % 10 -- 10 maps to key 0
-    hl.bind(mainMod .. " + " .. key, hl.dsp.focus({ workspace = i }))
-    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
+    local key = i % 10
+    bind(mainMod .. " + " .. key, hl.dsp.focus({ workspace = i }), "Switch to workspace " .. i)
+    bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i, follow = true }), "Move window and follow to workspace " .. i)
+    bind(mainMod .. " + CTRL + " .. key, hl.dsp.window.move({ workspace = i, follow = false }), "Move window silently to workspace " .. i)
 end
 
--- Media keys
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, repeating = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), { locked = true, repeating = true })
-hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
+bind(mainMod .. " + Page_Down", hl.dsp.focus({ workspace = "e+1" }), "Next occupied workspace")
+bind(mainMod .. " + Page_Up", hl.dsp.focus({ workspace = "e-1" }), "Previous occupied workspace")
+bind(mainMod .. " + N", hl.dsp.focus({ workspace = "empty" }), "Switch to nearest empty workspace")
+bind(mainMod .. " + S", hl.dsp.workspace.toggle_special("scratchpad"), "Toggle scratchpad")
+bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:scratchpad", follow = false }), "Send window to scratchpad")
+bind(mainMod .. " + Return", launch("kitty --class dropdown-terminal"), "Open dropdown terminal")
 
-hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
-hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"), { locked = true })
-hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true })
+-- Monitor navigation. Relative monitor selectors follow monitor order.
+bind(mainMod .. " + period", hl.dsp.focus({ monitor = "+1" }), "Focus next monitor")
+bind(mainMod .. " + comma", hl.dsp.focus({ monitor = "-1" }), "Focus previous monitor")
+bind(mainMod .. " + SHIFT + period", hl.dsp.window.move({ monitor = "+1", follow = true }), "Move window to next monitor")
+bind(mainMod .. " + SHIFT + comma", hl.dsp.window.move({ monitor = "-1", follow = true }), "Move window to previous monitor")
+bind(mainMod .. " + CTRL + period", hl.dsp.workspace.move({ monitor = "+1" }), "Move workspace to next monitor")
+bind(mainMod .. " + CTRL + comma", hl.dsp.workspace.move({ monitor = "-1" }), "Move workspace to previous monitor")
+
+-- Mouse wheel changes workspaces. Ctrl+Super preserves compositor zoom.
+bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }), "Next occupied workspace")
+bind(mainMod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }), "Previous occupied workspace")
+
+local function zoom(value)
+    return function()
+        local current = hl.get_config("cursor.zoom_factor") or 1.0
+        hl.config({ cursor = { zoom_factor = math.max(1.0, math.min(2.0, current + value)) } })
+    end
+end
+
+bind(mainMod .. " + CTRL + mouse_down", zoom(-0.2), "Zoom compositor out", { repeating = true })
+bind(mainMod .. " + CTRL + mouse_up", zoom(0.2), "Zoom compositor in", { repeating = true })
+
+-- Bar, clipboard, wallpaper, and reload actions
+bind(mainMod .. " + SHIFT + W", launch(scripts .. "/waybar-toggle.sh"), "Toggle Waybar")
+bind(mainMod .. " + V", launch(scripts .. "/clipboard.sh"), "Search and paste clipboard history")
+bind(mainMod .. " + CTRL + T", launch(scripts .. "/transcode.sh"), "Transcode a picture or video")
+bind(mainMod .. " + CTRL + P", launch(scripts .. "/package-manager.sh"), "Open package manager")
+bind(mainMod .. " + CTRL + D", launch(scripts .. "/defaults-menu.sh"), "Choose default applications")
+bind(mainMod .. " + CTRL + E", launch(scripts .. "/default-launcher.sh editor"), "Open default code editor")
+bind(mainMod .. " + SHIFT + V", launch(scripts .. "/vm-manager.sh"), "Open virtual machine manager")
+bind(mainMod .. " + W", launch("quickshell -n -c hyprquickpaper"), "Choose wallpaper")
+bind(mainMod .. " + ALT + W", launch(scripts .. "/wallpaper-cycle.sh random"), "Set random wallpaper")
+bind(mainMod .. " + ALT + Page_Down", launch(scripts .. "/wallpaper-cycle.sh next"), "Set next wallpaper")
+bind(mainMod .. " + ALT + Page_Up", launch(scripts .. "/wallpaper-cycle.sh previous"), "Set previous wallpaper")
+bind(mainMod .. " + SHIFT + T", launch(home .. "/.config/themes/picker.sh"), "Choose desktop theme")
+bind(mainMod .. " + CTRL + R", launch(scripts .. "/reload-desktop.sh"), "Reload desktop configuration")
+
+-- Screenshots, recording, and color picker
+bind("Print", launch(scripts .. "/screenshot.sh full"), "Capture full screen")
+bind("SHIFT + Print", launch(scripts .. "/screenshot.sh area"), "Capture selected region")
+bind("ALT + Print", launch(scripts .. "/screenshot.sh window"), "Capture active window")
+bind("CTRL + Print", launch(scripts .. "/screenshot.sh area-copy"), "Copy selected region")
+bind(mainMod .. " + Print", launch(scripts .. "/screenshot.sh annotate"), "Capture and annotate selected region")
+bind(mainMod .. " + CTRL + Print", launch(scripts .. "/screenshot.sh ocr"), "Copy text from selected region")
+bind(mainMod .. " + ALT + Print", launch(scripts .. "/screenshot.sh delay"), "Capture screen after five seconds")
+bind(mainMod .. " + SHIFT + R", launch(scripts .. "/record-toggle.sh"), "Start or stop screen recording")
+bind(mainMod .. " + SHIFT + C", launch(scripts .. "/color-picker.sh"), "Pick color from screen")
+bind(mainMod .. " + SHIFT + N", launch("dunstctl history-pop"), "Show last notification")
+bind(mainMod .. " + CTRL + N", launch("dunstctl set-paused toggle"), "Toggle do not disturb")
+bind(mainMod .. " + CTRL + SHIFT + N", launch("sh -c 'dunstctl close-all; dunstctl history-clear'"), "Clear all notifications")
+
+-- Brightness, volume, microphone, and media keys
+bind("XF86MonBrightnessUp", launch("brightnessctl -e4 -n2 set 5%+"), "Increase brightness", { locked = true, repeating = true })
+bind("XF86MonBrightnessDown", launch("brightnessctl -e4 -n2 set 5%-"), "Decrease brightness", { locked = true, repeating = true })
+bind("XF86AudioRaiseVolume", launch("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"), "Increase volume", { locked = true, repeating = true })
+bind("XF86AudioLowerVolume", launch("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), "Decrease volume", { locked = true, repeating = true })
+bind("XF86AudioMute", launch("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), "Mute audio", { locked = true })
+bind("XF86AudioMicMute", launch("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), "Mute microphone", { locked = true })
+bind("XF86AudioPlay", launch("playerctl play-pause"), "Play or pause media", { locked = true })
+bind("XF86AudioPause", launch("playerctl play-pause"), "Play or pause media", { locked = true })
+bind("XF86AudioNext", launch("playerctl next"), "Next media track", { locked = true })
+bind("XF86AudioPrev", launch("playerctl previous"), "Previous media track", { locked = true })

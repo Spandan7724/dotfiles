@@ -1,0 +1,30 @@
+/* The desktop menu.
+ *
+ * config.rasi already carries the shared design language — bare prompt, no
+ * scrollbar, hairline selection, radii that track Hyprland's rounding. This
+ * file only states what the menu does differently: a narrower card, no icon
+ * column (rows carry their own nerd-font glyph), and a list that sizes itself
+ * to however many rows the route has. */
+
+@import "config.rasi"
+
+configuration {
+    show-icons: false;
+}
+
+window {
+    width: 380px;
+}
+
+listview {
+    fixed-height: false;
+    dynamic: true;
+    /* The list sizes itself to the route, so a track would only ever be
+       decoration; the root's index of the whole tree scrolls with the keys. */
+    scrollbar: false;
+}
+
+entry {
+    /* The prompt already names the route. */
+    placeholder: "";
+}

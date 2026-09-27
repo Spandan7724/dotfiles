@@ -1,0 +1,5 @@
+* {
+    bg: #2d353bf2; bg-alt: #343f44ff; bg-hover: #3d484dff; bg-selected: #3d484dff;
+    fg: #d3c6aaff; fg-muted: #859289ff; fg-dark: #2d353bff;
+    accent: #7fbbb3ff; accent-soft: #7fbbb344; urgent: #e67e80ff; border-color: #7fbbb366;
+}

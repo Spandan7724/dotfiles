@@ -3,8 +3,8 @@
 #
 # Colors deliberately live in dunstrc.d/ drop-ins instead of this file. Dunst
 # reads dunstrc.d/*.conf in lexical order after the base config and lets the
-# later file win, so the theme profile and the wallpaper palette can override
-# appearance without this file ever being rewritten.
+# later file win. Matugen writes 40-colors.conf and the theme symlink is loaded
+# at 50-theme.conf, so named themes win while Wallpaper Dark/Light stay dynamic.
 
 [global]
     monitor = 0

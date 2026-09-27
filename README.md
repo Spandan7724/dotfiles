@@ -1,8 +1,8 @@
 # Personal Arch + Hyprland dotfiles
 
-Personal floating-first Hyprland desktop configuration for a fresh Arch Linux
-installation. Normal application windows float by default while fullscreen,
-workspaces, keyboard navigation, and manual layout controls remain available.
+Personal tiled Hyprland desktop configuration for a fresh Arch Linux
+installation. Normal application windows use the dwindle layout, while utility
+windows and file dialogs float where appropriate.
 
 The desktop stack uses Waybar, Rofi, Quickshell, Hyprlock, Wlogout, Dunst,
 Kitty, Thunar, PipeWire, Fish or Zsh, Starship, and Matugen for
@@ -11,11 +11,13 @@ wallpaper-derived colors.
 ## Applications
 
 - Default browser: Zen Browser
-- Secondary browser: Brave
+- Other browsers: Brave, Google Chrome
 - Terminal: Kitty
 - File manager: Thunar
 - Graphical editor: Zed
 - Terminal editors: Helix and Neovim with NvChad
+- Emacs: Doom Emacs
+- Login screen: SDDM with the SilentSDDM theme (nord variant)
 - Shells: Fish and Zsh
 - Prompt: Starship
 
@@ -63,16 +65,18 @@ Requirements before running it:
   repository and the configuration directory overlap.
 
 It does not need a graphical session. Running it from a TTY on a fresh install
-is the expected path; start Hyprland afterwards.
+is the expected path; reboot afterwards and log in from SDDM with the
+"Hyprland (uwsm-managed)" session.
 
 What it does, in order: updates the system, detects graphics and CPU hardware,
 finds or bootstraps an AUR helper, resolves and installs official and AUR
 packages, backs up any managed configuration it is about to replace, installs
 the dotfiles, configures graphics, installs the wallpapers, enables
-NetworkManager, Bluetooth, and PipeWire, configures power management, sets Zen
-as the default browser and applies the initial theme, sets up the Rust
-toolchain, clones the official NvChad starter, then verifies the result and
-prints a summary. HyprMod provides a graphical editor for Hyprland settings and
+NetworkManager, Bluetooth, PipeWire, firewalld, and CUPS, configures the SDDM
+login screen and zram, configures power management, sets Zen as the default
+browser and applies the initial theme (Wallpaper Dark), installs
+reboot-to-Windows on dual-boot machines, sets up the Rust toolchain, installs
+Doom Emacs, then verifies the result and prints a summary. HyprMod provides a graphical editor for Hyprland settings and
 shortcuts.
 
 Package resolution and installation are a hard gate: if any required official
@@ -130,26 +134,42 @@ Both shells use the same active Starship theme.
 
 ## NvChad
 
-The installer follows the official NvChad starter flow by cloning
-`NvChad/starter` into `~/.config/nvim` when no Neovim configuration exists.
-After installation:
+The repository ships the NvChad configuration in `.config/nvim`; the official
+`NvChad/starter` is only cloned when that directory is missing. After
+installation:
 
 1. Start `nvim` and wait for plugins to finish installing.
 2. Run `:MasonInstallAll`.
 3. Run `:TSInstallAll`.
 
-An existing Neovim configuration is never overwritten.
+## Doom Emacs
+
+The personal Doom configuration lives in `.config/doom`. The installer clones
+Doom itself into `~/.config/emacs` and runs `doom install --no-config`, which
+builds the packages without touching that configuration. After changing
+`init.el` or `packages.el`, run `doom sync`.
+
+## Reboot to Windows
+
+On a machine that also has Windows Boot Manager, Power → Windows in the desktop
+menu, the "Reboot to Windows" launcher entry, or `reboot-windows` in a shell
+sets UEFI `BootNext` to Windows Boot Manager and reboots. The firmware then
+starts Windows directly, without GRUB, which keeps BitLocker's measured boot
+path intact. `BootNext` only lasts one boot, so the following reboot returns
+to Arch. The privileged half is `system/dotfiles-reboot-windows-root`, allowed
+through a sudoers rule limited to its `set` and `clear` arguments.
 
 ## Coordinated themes
 
-`Super + Shift + T` opens the theme selector. The initial profiles are:
+`Super + Shift + T` opens the theme selector. A fresh install starts on
+`wallpaper-dark` with `wallpaper-19.jpg`. Other profiles include:
 
 - `monochrome-dark`
 - `monochrome-light`
 
 Switching profiles coordinates Kitty, Waybar, Rofi, Dunst, Hyprlock, Wlogout,
-GTK 3/4, Starship, Zed, Helix, the system light/dark preference, the Papirus
-icon variant, and the wallpaper. GTK uses its supported theme and
+GTK 3/4, Starship, the system light/dark preference, the Papirus icon variant,
+and the wallpaper. GTK uses its supported theme and
 color-preference settings rather than global widget CSS overrides. The switcher
 can also be run directly:
 
@@ -175,8 +195,7 @@ generated monolith:
 | Rofi | `@import` | `@import "colors.rasi"` |
 | Dunst | `dunstrc.d/50-theme.conf` drop-in | `dunstrc.d/90-colors.conf` drop-in |
 | Hyprlock | `source =` | `source =` |
-| Starship, Helix | symlink into `themes/current` | not recolored |
-| Zed | system light/dark + local theme | not recolored |
+| Starship | symlink into `themes/current` | not recolored |
 
 Dunst reads `dunstrc.d/*.conf` in lexical order after the base `dunstrc` and
 lets the later file win, so `50-theme.conf` carries the profile and
@@ -194,9 +213,9 @@ To apply any wallpaper and its colors without changing the named profile:
 ~/.config/themes/wallpaper.sh "$HOME/Pictures/Wallpapers/wallpaper-01.png"
 ```
 
-Zed, Helix, Starship, and GTK continue to follow the coordinated named
-light/dark profile. Their editor syntax and widget themes deliberately remain
-stable while the desktop chrome and terminal palette follow the wallpaper.
+Starship and GTK continue to follow the coordinated named light/dark profile.
+Their appearance remains stable while the desktop chrome and terminal palette
+follow the wallpaper.
 Already-running GTK applications may need to be restarted.
 
 The theme implementation follows each application's native format:
@@ -206,8 +225,6 @@ The theme implementation follows each application's native format:
 - Rofi Rasi themes: https://davatorium.github.io/rofi/current/rofi-theme.5/
 - GTK settings and system color preference: https://docs.gtk.org/gtk4/class.Settings.html
 - Starship TOML schema and palettes: https://starship.rs/config/
-- Zed local theme schema: https://zed.dev/docs/extensions/themes
-- Helix theme scopes and palettes: https://docs.helix-editor.com/master/themes.html
 - Matugen configuration and templates: https://github.com/InioX/matugen
 - Quickshell watched files: https://quickshell.org/docs/v0.3.1/types/Quickshell.Io/FileView/
 - Dunst settings and drop-in directory: https://man.archlinux.org/man/dunst.5
@@ -217,41 +234,162 @@ The theme implementation follows each application's native format:
 
 | Keybinding | Action |
 | --- | --- |
-| `Super + T` | Open Kitty |
-| `Super + D` | Toggle Rofi application launcher |
-| `Super + E` | Open Thunar |
-| `Super + B` | Open Zen Browser |
+| `Super + T` | Open the default terminal |
+| `Super + D` | Open the dedicated applications menu |
+| `Super + E` | Open the default file manager |
+| `Super + B` | Open the default browser |
+| `Super + R` | Search files |
+| `Super + Shift + D` | Search the web |
+| `Super + =` | Calculate and copy the result |
+| `Super + ;` | Choose and copy an emoji or symbol |
+| `Super + X` | Open quick settings |
+| `Super + F1` | Show the searchable shortcut guide |
+| `Super + A` | Open audio settings |
 | `Super + Q` | Close active window |
+| `Super + Shift + Q` | Force-kill active window |
 | `Super + F` | Toggle fullscreen |
-| `Super + Space` | Toggle floating and center at 70% size |
-| `Super + O` | Select active-window opacity |
-| `Super + W` | Open wallpaper selector |
-| `Super + Shift + T` | Open coordinated theme selector |
-| `Super + /` | Open HyprMod settings and shortcut editor |
-| `Super + Shift + W` | Toggle Waybar |
-| `Super + V` | Open clipboard history |
-| `Super + Tab` | Lock with Hyprlock |
-| `Super + Grave` | Open Wlogout |
-| `Super + Shift + E` | Exit Hyprland |
-| `Super + H/J/K/L` | Focus left/down/up/right |
-| `Super + Shift + H/J/K/L` | Move window left/down/up/right |
-| `Super + Ctrl + H/J/K/L` | Resize window |
+| `Super + M` | Toggle maximize |
+| `Super + Space` | Toggle floating and tiled state |
+| `Super + Shift + Space` | Toggle every window on the workspace between floating and tiled |
+| `Super + C` | Center a floating window |
+| `Super + P` | Toggle pseudotile |
+| `Super + Shift + P` | Pin a floating window |
+| `Super + O` | Cycle active-window opacity |
+| `Super + \` | Toggle dwindle split direction |
+| `Super + Arrow` | Focus in a direction |
+| `Super + Shift + Arrow` | Move in a direction |
+| `Super + Alt + Arrow` | Swap tiled windows |
+| `Super + Ctrl + Arrow` | Resize a window |
+| `Super + Ctrl + Alt + Arrow` | Move a floating window by 40 pixels |
+| `Super + Shift + -/+` | Adjust the current split ratio |
+| `Super + Shift + \` | Swap the two halves of the current split |
+| `Super + Ctrl + H/J/K/L` | Preselect the next split direction |
+| `Super + Alt + H/L/K/J` | Place a floating window on the left/right/top/bottom half |
+| `Super + Alt + U/I/N/,` | Place a floating window in a screen corner |
+| `Super + left mouse drag` | Move or rearrange a window |
+| `Super + right mouse drag` | Resize a window or tiled split |
+| `Super + Shift + right mouse drag` | Resize a floating window while preserving its aspect ratio |
+| `Alt + Tab` | Cycle windows |
+| `Super + Tab` | Open the workspace and window overview |
+| `Super + G` | Toggle a tabbed window group |
+| `Super + Ctrl + G` | Toggle performance mode |
+| `Super + [` / `Super + ]` | Cycle grouped windows |
 | `Super + 1..0` | Switch to workspace 1–10 |
-| `Super + Shift + 1..0` | Move window to workspace 1–10 |
-| `Super + left mouse drag` | Move window |
-| `Super + right mouse drag` | Resize window |
-| `Super + mouse wheel` | Zoom compositor view |
-| `Super + keypad -/+` | Zoom compositor view |
-| `Super + Delete` | Screenshot the full output |
-| `Delete` | Screenshot a selected region |
+| `Super + Shift + 1..0` | Move a window and follow it |
+| `Super + Ctrl + 1..0` | Move a window without leaving the current workspace |
+| `Super + Page Up/Down` | Switch to the previous/next occupied workspace |
+| `Super + S` | Toggle the scratchpad |
+| `Super + Shift + S` | Send a window to the scratchpad |
+| `Super + Return` | Open a dropdown terminal |
+| `Super + ,/.` | Focus the previous/next monitor |
+| `Super + Shift + ,/.` | Move a window to the previous/next monitor |
+| `Super + Ctrl + ,/.` | Move a workspace to the previous/next monitor |
+| `Super + W` | Open wallpaper selector |
+| `Super + Alt + W` | Choose a random wallpaper |
+| `Super + Alt + Page Up/Down` | Use the previous/next wallpaper |
+| `Super + Shift + T` | Open coordinated theme selector |
+| `Super + /` | Search live Hyprland keybindings |
+| `Super + Shift + /` | Open or focus HyprMod advanced settings |
+| `Super + Escape` / `Super + Alt + Space` / `Super + F2` | Open the unified desktop control menu |
+| `Super + Shift + W` | Toggle Waybar |
+| `Super + V` | Search clipboard history and paste the selected text or image |
+| `Super + Ctrl + T` | Transcode a picture or video |
+| `Super + Ctrl + P` | Open the package-manager TUI |
+| `Super + Ctrl + D` | Choose default applications |
+| `Super + Ctrl + E` | Open the default code editor |
+| `Super + Shift + V` | Open the virtual-machine menu |
+| `Super + L` | Lock with Hyprlock |
+| `Super + Grave` | Open the lock, sleep, hibernate, logout, restart, and shutdown menu |
+| `Super + Shift + E` | Exit Hyprland |
+| `Super + mouse wheel` | Switch occupied workspaces |
+| `Super + Ctrl + mouse wheel` | Zoom the compositor view |
+| `Print` / `Shift + Print` | Capture the full screen / a selected region |
+| `Alt + Print` / `Ctrl + Print` | Capture the active window / copy a selected region |
+| `Super + Print` | Capture and annotate a selected region |
+| `Super + Ctrl + Print` | OCR a selected region to the clipboard |
+| `Super + Alt + Print` | Capture the full screen after five seconds |
+| `Super + Shift + R` | Start or stop a selected-region screen recording |
+| `Super + Shift + C` | Pick and copy a color |
+| `Super + Shift + N` | Show the last notification from history |
+| `Super + Ctrl + N` | Toggle do not disturb |
+| `Super + Ctrl + W/B` | Open network / Bluetooth settings |
+| `Super + Ctrl + R` | Reload Hyprland and Waybar |
 | `XF86MonBrightnessUp/Down` | Adjust brightness |
 | `XF86AudioRaise/LowerVolume` | Adjust volume |
 | `XF86AudioMute` | Toggle mute |
-| `XF86AudioPlay/Next/Previous` | Control media |
+| `XF86AudioMicMute` | Toggle microphone mute |
+| `XF86AudioPlay/Pause/Next/Previous` | Control media |
+
+`Super + Tab` opens a native 5×2 overview of workspaces 1–10 with live window
+previews. Navigate with the arrow keys or `H/J/K/L`, select with Enter or Space,
+cancel with Escape, click a workspace, or drag a window preview to another
+workspace. The overview is provided by HyprExpo and is built against the exact
+installed Hyprland revision by the installer.
+
+The bar keeps navigation, search, time, audio, battery, and current state visible.
+Its workspace module shows occupied workspaces and the active workspace instead
+of reserving room for all ten. The Arch button opens the desktop control menu;
+the Search pill opens the dedicated applications launcher.
+
+The desktop menu follows a compact hierarchy. **Capture** holds screenshots
+(region, window, full screen, delayed, annotate, to clipboard), screen
+recording, OCR, and the colour picker; **Style** holds the theme, wallpapers,
+opacity, the bar, and reload; **Setup** doubles as quick settings and holds
+defaults, Wi-Fi, Bluetooth, audio, brightness, night light, displays, the power
+profile, packages, virtual machines, fingerprint, and advanced Hyprland
+settings; **Tools** holds clipboard, calculator, emoji, file and web search,
+transcoding, and monitoring. **Setup › Screen and lock** sets the idle
+timeouts — when the session locks, when the screen blanks, when the machine
+suspends — plus an immediate lock and a keep-awake hold. Right-clicking the Waybar settings icon opens the
+Defaults menu directly.
+
+Labels are one or two words. Everything else a person might type — `wallpaper`,
+`ocr`, `qemu`, `poweroff` — lives in a keywords column that is searched but
+never shown.
+
+The root lists the categories and also indexes every action in the tree, so a
+search resolves to the thing itself rather than to the category containing it:
+typing `theme` gives **Theme**, with a dim **Style** under it saying where it
+lives. An indexed row leads with its own name and carries its path as a second
+line, the way the Omarchy menu does it, rather than spelling out
+`Style › Theme` inline. Category rows have nothing to put on that second line
+and stay one line, centred. Category rows carry no
+keywords, which is what makes that work — a category matching `ocr` would
+otherwise rank alongside the leaf that actually does it. For the same reason
+categories carry no descriptive subtitle: the words in one would match, and
+`theme` would surface **Style** all over again. Matching is
+substring-per-token rather than fuzzy: fuzzy matched scattered letters across
+the hidden keyword column, so `idle` buried the one row that says idle under
+every row containing an i, d, l and e. Submenus are marked with a `›` in a
+column of their own; Escape steps back one level rather than closing the menu,
+and pressing the menu key again closes it outright.
+
+Rows whose program is not installed, or whose hardware is absent, are hidden
+rather than listed and broken. Hibernate, for instance, only appears when a
+non-zram swap device and suspend-to-disk are both available.
+
+The whole menu is one declarative table at the top of
+`.config/hypr/scripts/desktop-menu.sh` — `parent | id | icon | label | keywords
+| action | when` — rendered by a single generic pass. Adding an entry is one
+line. Selection is dispatched on the hidden `id` column rather than on the
+visible label, so rewording a row cannot break its action. `power-menu.sh` and
+`control-center.sh` are thin wrappers onto the `power` and `setup` routes, so
+the standalone bindings and the menu can never drift apart.
+
+The Defaults menu configures the terminal, login shell, browser, editor, file
+manager, PDF viewer, image viewer, and video player. It updates both the
+dotfiles launch wrappers and the relevant XDG MIME handlers.
+Less frequent information expands in hover drawers: tray applications;
+Bluetooth; microphone state; brightness and system resources; updates, night
+light, and idle inhibition; and the power action. Click the network, audio,
+battery, notification, or settings items for their normal controls. Right-click
+the centered search pill to open the workspace overview.
 
 ## Graphical shortcut management
 
-`Super + /` opens HyprMod. Its Keybindings page can inspect, capture, add,
+`Super + /` opens a fast searchable guide generated from the bindings that
+Hyprland actually loaded. `Super + Shift + /` opens or focuses HyprMod when a
+graphical editor is needed. Its Keybindings page can inspect, capture, add,
 edit, and remove shortcuts using Hyprland's native Lua configuration format.
 
 Repository defaults remain in `.config/hypr/keybinds.lua`. HyprMod writes its
@@ -307,6 +445,24 @@ eval` and `hl.monitor(...)`, so `hyprctl reload` returns to the mode in
 rather than assuming it is named exactly `60`, and retries temporary failures.
 A machine with no external power supply is treated as a desktop and the
 watcher exits immediately.
+
+On the Lenovo Legion 7, clicking Waybar's power-profile icon opens a profile
+menu that coordinates the CPU/platform profile and NVIDIA ceiling. Power saver
+uses a strict 55 W cap, balanced starts near 80 W, and performance enables
+Dynamic Boost up to the Lenovo-rated 130 W TGP. The helper caps every request
+to the min/max range reported by the NVIDIA driver. It pauses `nvidia-powerd`
+for the strict power-saver cap and runs it for balanced and performance. The installer
+places the validated helper under `/usr/local/libexec`; the user-writable
+configuration never runs arbitrary commands as root.
+
+## Themes and wallpapers
+
+The built-in profiles are Monochrome Dark, Monochrome Light, Gruvbox Dark,
+Everforest, Tokyo Night, Wallpaper Dark, and Wallpaper Light. A named profile
+coordinates Rofi, Waybar, Kitty, Dunst, Hyprlock, Wlogout, GTK mode, icons, and
+Starship. Wallpaper selection remains independent. The two Wallpaper profiles
+use Matugen colors from whichever wallpaper is selected; every other profile
+keeps its own palette while allowing any wallpaper.
 
 ### NVIDIA runtime power management
 

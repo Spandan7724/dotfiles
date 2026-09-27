@@ -1,8 +1,10 @@
 # Hyprland desktop
 hyprland
+hyprpm
 waybar
 rofi
 hyprlock
+hypridle
 wlogout
 quickshell
 hyprmod
@@ -13,38 +15,66 @@ dunst
 networkmanager
 network-manager-applet
 polkit-kde-agent
+uwsm
+
+# Login screen (SDDM with the SilentSDDM theme)
+sddm
+sddm-silent-theme
+qt6-svg
+qt6-virtualkeyboard
+qt6-multimedia-ffmpeg
+qt6-imageformats
 
 # Browsers
 zen-browser-bin
 brave-bin
+google-chrome
 
 # Wallpaper and screenshots
 awww
 matugen
 grim
 slurp
+wf-recorder
+swappy
+hyprpicker
+tesseract
+tesseract-data-eng
 imagemagick
 
 # Clipboard
 cliphist
 wl-clipboard
+wtype
 
 # Audio and media controls
 pipewire
 pipewire-pulse
 wireplumber
+pipewire-alsa
+pipewire-jack
+gst-plugin-pipewire
+libpulse
+sof-firmware
 pavucontrol
 playerctl
+libqalculate
 
 # Terminal and file manager
 kitty
 thunar
 tumbler
 ffmpegthumbnailer
+gvfs
+thunar-volman
 papirus-icon-theme
 papirus-folders
 nwg-look
+nwg-displays
 mpv
+imv
+zathura
+zathura-pdf-mupdf
 
 # Laptop integration
 bluez
@@ -52,6 +82,7 @@ bluez-utils
 blueman
 gammastep
 brightnessctl
+gnome-keyring
 
 # Power management. power-profiles-daemon is the conservative baseline; TLP is
 # deliberately absent because the two overwrite the same kernel tunables.
@@ -65,6 +96,10 @@ ttf-jetbrains-mono-nerd
 ttf-iosevka-nerd
 ttf-cascadia-code-nerd
 otf-font-awesome
+noto-fonts
+noto-fonts-emoji
+ttf-liberation
+ttf-nerd-fonts-symbols-mono
 
 # Shells and desktop utilities
 fish
@@ -76,3 +111,28 @@ eza
 btop
 cava
 fastfetch
+pacman-contrib
+rofimoji
+fzf
+
+# Fingerprint authentication
+fprintd
+libfprint
+usbutils
+
+# Virtual machines
+virt-manager
+virt-viewer
+qemu-desktop
+libvirt
+dnsmasq
+edk2-ovmf
+swtpm
+
+# Printing
+cups
+cups-pk-helper
+system-config-printer
+
+# Firewall
+firewalld

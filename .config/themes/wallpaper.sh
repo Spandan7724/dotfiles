@@ -22,6 +22,10 @@ case "$mode" in
     *) mode="dark" ;;
 esac
 
+state_file="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-wallpaper"
+mkdir -p "$(dirname "$state_file")"
+printf '%s\n' "$(realpath -- "$wallpaper")" >"$state_file"
+
 if command -v awww >/dev/null 2>&1; then
     if awww query >/dev/null 2>&1; then
         awww img "$wallpaper" -t random --transition-duration 1 || \

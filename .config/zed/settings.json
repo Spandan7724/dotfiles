@@ -1,14 +1,39 @@
 {
+  "base_keymap": "VSCode",
+  "project_panel": {
+    "dock": "left"
+  },
+  "telemetry": {
+    "diagnostics": true,
+    "metrics": false,
+    "anthropic_retention": false
+  },
+  "session": {
+    "trust_all_worktrees": true
+  },
+  "agent_servers": {
+    "codex-acp": {
+      "type": "registry"
+    },
+    "claude-acp": {
+      "type": "registry"
+    }
+  },
   "theme": {
     "mode": "system",
-    "dark": "Personal Monochrome Dark",
-    "light": "Personal Monochrome Light"
+    "light": "Gruvbox Light",
+    "dark": "Catppuccin Espresso (Blur) [Heavy]"
   },
   "buffer_font_family": "JetBrainsMono Nerd Font",
   "terminal": {
     "font_family": "JetBrainsMono Nerd Font"
   },
-  "vim_mode": true,
+  "vim_mode": false,
   "autosave": "on_focus_change",
-  "format_on_save": "on"
+  "format_on_save": "on",
+  "auto_install_extensions": {
+    "catppuccin-blur": true,
+    "html": true,
+    "rainbow-csv": true
+  }
 }

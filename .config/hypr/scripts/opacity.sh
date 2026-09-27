@@ -1,18 +1,18 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+menu_theme="$HOME/.config/rofi/menu.rasi"
 
-choice=$(printf "100%%\n90%%\n80%%\n70%%\n60%%\n50%%\n40%%" | rofi -dmenu -p "")
+selection="$({
+    printf '󰃞  100%%  opaque\t1.0\n'
+    printf '󰃟  90%%\t0.9\n'
+    printf '󰃟  80%%\t0.8\n'
+    printf '󰃝  70%%\t0.7\n'
+    printf '󰃝  60%%\t0.6\n'
+    printf '󰃚  50%%\t0.5\n'
+    printf '󰃚  40%%  ghost\t0.4\n'
+} | rofi -dmenu -i -no-custom -p 'Window opacity' -display-columns 1 -theme "$menu_theme")" || exit 0
 
-case "$choice" in
-    "100%") opacity=1.0 ;;
-    "90%")  opacity=0.9 ;;
-    "80%")  opacity=0.8 ;;
-    "70%")  opacity=0.7 ;;
-    "60%")  opacity=0.6 ;;
-    "50%")  opacity=0.5 ;;
-    "40%")  opacity=0.4 ;;
-    *) exit 0 ;;
-esac
+opacity="${selection#*$'\t'}"
+[[ -n "$opacity" && "$opacity" != "$selection" ]] || exit 0
 
-sed -i "0,/opacity = \".* override\"/s//opacity = \"$opacity override\"/" ~/.config/hypr/rules.lua
-
-hyprctl reload
+hyprctl dispatch "hl.dsp.window.set_prop({ prop = 'opacity', value = '$opacity override' })"

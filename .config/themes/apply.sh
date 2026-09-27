@@ -18,6 +18,17 @@ ln -s "$theme" "$temporary_link"
 mv -Tf "$temporary_link" "$themes_root/current"
 
 mode="$(<"$theme_dir/mode")"
+set_gtk_setting() {
+    local file="$1" key="$2" value="$3"
+    mkdir -p "$(dirname "$file")"
+    [[ -f "$file" ]] || printf '[Settings]\n' >"$file"
+    if grep -q "^${key}=" "$file"; then
+        sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+    else
+        printf '%s=%s\n' "$key" "$value" >>"$file"
+    fi
+}
+
 if command -v gsettings >/dev/null 2>&1; then
     if [[ "$mode" == "dark" ]]; then
         gsettings set org.gnome.desktop.interface color-scheme prefer-dark 2>/dev/null || true
@@ -30,15 +41,28 @@ if command -v gsettings >/dev/null 2>&1; then
     fi
 fi
 
-wallpaper_name="$(<"$theme_dir/wallpaper")"
-wallpaper="$HOME/Pictures/Wallpapers/$wallpaper_name"
-if [[ -f "$wallpaper" ]]; then
-    "$themes_root/wallpaper.sh" "$wallpaper" "$mode"
+if [[ "$mode" == dark ]]; then
+    gtk_theme=Adwaita-dark
+    icon_theme=Papirus-Dark
+    prefer_dark=1
 else
-    printf 'Warning: theme wallpaper is missing: %s\n' "$wallpaper" >&2
+    gtk_theme=Adwaita
+    icon_theme=Papirus
+    prefer_dark=0
+fi
+for gtk_settings in "$config_root/gtk-3.0/settings.ini" "$config_root/gtk-4.0/settings.ini"; do
+    set_gtk_setting "$gtk_settings" gtk-theme-name "$gtk_theme"
+    set_gtk_setting "$gtk_settings" gtk-icon-theme-name "$icon_theme"
+    set_gtk_setting "$gtk_settings" gtk-application-prefer-dark-theme "$prefer_dark"
+done
+
+# Theme selection and wallpaper selection are independent. Reusing the current
+# wallpaper only regenerates its palette for the selected light or dark mode.
+wallpaper_state="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-wallpaper"
+if [[ -r "$wallpaper_state" ]]; then
+    wallpaper="$(<"$wallpaper_state")"
+    [[ -f "$wallpaper" ]] && "$themes_root/wallpaper.sh" "$wallpaper" "$mode"
 fi
 
-pkill -USR1 hx 2>/dev/null || true
-
 printf 'Applied theme: %s\n' "$theme"
-printf 'Already-running GTK applications may need to be restarted.\n'
+printf 'Already-running GTK applications, including Thunar, may need to be reopened.\n'

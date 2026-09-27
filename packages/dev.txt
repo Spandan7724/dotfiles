@@ -1,6 +1,7 @@
 # Editors and NvChad prerequisites
 zed
 helix
+emacs-wayland
 neovim
 ripgrep
 tree-sitter-cli

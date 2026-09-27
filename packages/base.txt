@@ -4,4 +4,18 @@ git
 jq
 unzip
 xdg-utils
+fd
+less
+pandoc-cli
+github-cli
+git-lfs
+sudo
+btrfs-progs
+exfatprogs
+
+# UEFI boot management, used by reboot-to-Windows
+efibootmgr
+
+# Compressed RAM swap
+zram-generator
 

@@ -1,0 +1,12 @@
+[Unit]
+Description=Keep platform and NVIDIA limits aligned with the selected power profile
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.config/hypr/scripts/power-profile-watch.sh
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
