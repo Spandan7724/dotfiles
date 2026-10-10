@@ -14,6 +14,21 @@ hl.layer_rule({
     blur = true,
 })
 
+-- Quickshell's desktop menu and top-bar pop-ups (quickshell/panels). The cards
+-- are translucent; ignore_alpha keeps the blur to them, since the menu's dimmed
+-- backdrop and shadow are drawn below that alpha.
+hl.layer_rule({
+    match = { namespace = "dotfiles-menu" },
+    blur = true,
+    ignore_alpha = 0.5,
+})
+
+hl.layer_rule({
+    match = { namespace = "dotfiles-panel" },
+    blur = true,
+    ignore_alpha = 0.5,
+})
+
 -- Opacity rules: 90% for all windows except fullscreen
 hl.window_rule({
     match = { class = ".*" },

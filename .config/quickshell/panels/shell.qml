@@ -104,9 +104,10 @@ ShellRoot {
             width: parent.width
             height: content.implicitHeight + 32
             radius: 16
-            color: Theme.background
+            // Translucent so the dotfiles-panel blur rule shows through.
+            color: Theme.card
             border.width: 1
-            border.color: Theme.alpha(Theme.outline, 0.3)
+            border.color: Theme.alpha(Theme.foreground, Theme.dark ? 0.09 : 0.12)
 
             Item {
                 id: content

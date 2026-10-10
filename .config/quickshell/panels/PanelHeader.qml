@@ -25,7 +25,7 @@ RowLayout {
             text: root.icon
             font.family: Theme.iconFont
             font.pixelSize: 19
-            color: root.checked || !root.showSwitch ? Theme.primary : Theme.muted
+            color: root.checked || !root.showSwitch ? Theme.foreground : Theme.dimText
         }
     }
 
@@ -42,7 +42,7 @@ RowLayout {
 
         Text {
             text: root.status
-            color: Theme.muted
+            color: Theme.dimText
             font.pixelSize: 11
             elide: Text.ElideRight
             Layout.fillWidth: true

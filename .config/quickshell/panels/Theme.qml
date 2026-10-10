@@ -19,9 +19,19 @@ Singleton {
     readonly property color surface: palette.surface
     readonly property color surfaceVariant: palette.surfaceVariant
     readonly property color foreground: palette.foreground
-    readonly property color muted: palette.muted
+    // Matugen's `muted` can land at ~2:1 against the background on grey
+    // wallpapers, so secondary text derives from foreground instead.
+    readonly property color muted: dimText
     readonly property color primary: palette.primary
     readonly property color outline: palette.outline
+    readonly property bool dark: palette.mode !== "light"
+
+    // Secondary and tertiary text.
+    readonly property color dimText: alpha(foreground, 0.55)
+    readonly property color faintText: alpha(foreground, 0.38)
+
+    // Card fill: translucent so Hyprland's layer blur shows through.
+    readonly property color card: alpha(background, 0.94)
     // Read by hand: JsonAdapter cannot declare these keys, because "error" is
     // a signal name and "onPrimary" parses as a signal handler.
     property color primaryText: "#111111"

@@ -4,6 +4,7 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Widgets
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 import "MenuModel.js" as Model
 
@@ -182,10 +183,24 @@ PanelWindow {
         }
     }
 
+    // Desktop entries kept out of the launcher: one id per line in
+    // hidden-apps.txt, e.g. "cmake-gui" (with or without ".desktop").
+    property var hiddenApps: []
+
+    FileView {
+        path: Quickshell.shellPath("hidden-apps.txt")
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: root.hiddenApps = text().split("\n")
+            .map(l => l.replace(/#.*/, "").trim().replace(/\.desktop$/, ""))
+            .filter(l => l.length)
+    }
+
     // ---- rows --------------------------------------------------------------------
 
     readonly property var apps: DesktopEntries.applications.values
-        .filter(a => !a.noDisplay)
+        .filter(a => !a.noDisplay && !hiddenApps.includes(a.id.replace(/\.desktop$/, "")))
         .slice()
         .sort((a, b) => (usage[b.id] || 0) - (usage[a.id] || 0) || a.name.localeCompare(b.name))
 
@@ -275,7 +290,16 @@ PanelWindow {
             counts[row.app.id] = (counts[row.app.id] || 0) + 1
             usage = counts
             usageFile.setText(JSON.stringify(counts))
-            row.app.execute()
+            // execute() ignores Terminal=true, so console apps (btop, htop...)
+            // would start with no tty and exit; wrap them in the default terminal.
+            if (row.app.runInTerminal)
+                Quickshell.execDetached({
+                    command: [Quickshell.env("HOME") + "/.config/hypr/scripts/default-launcher.sh",
+                              "terminal", "-e"].concat(row.app.command),
+                    workingDirectory: row.app.workingDirectory,
+                })
+            else
+                row.app.execute()
             return root.closeRequested()
         }
         const e = row.entry
@@ -323,11 +347,97 @@ PanelWindow {
 
     readonly property bool inputOnly: mode === "select" && request !== null && request.inputOnly === true
 
+    // ---- presentation helpers ----------------------------------------------------
+
+    function escapeMarkup(s) {
+        return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    }
+
+    // The label as StyledText with the searched words picked out, the same
+    // words Model.score matched on (word starts first, then anywhere).
+    function markMatch(label) {
+        label = label || ""
+        const query = search.text.trim().toLowerCase()
+        if (!query)
+            return escapeMarkup(label)
+        const lower = label.toLowerCase()
+        const marked = new Array(label.length).fill(false)
+        for (const w of query.split(/\s+/)) {
+            if (!w)
+                continue
+            let at = (" " + lower).indexOf(" " + w)
+            if (at < 0)
+                at = lower.indexOf(w)
+            for (let i = at; at >= 0 && i < at + w.length; i++)
+                marked[i] = true
+        }
+        const strong = Theme.foreground.toString()
+        let out = ""
+        for (let i = 0; i < label.length;) {
+            let j = i
+            while (j < label.length && marked[j] === marked[i])
+                j++
+            const part = escapeMarkup(label.slice(i, j))
+            out += marked[i] ? '<b><font color="' + strong + '">' + part + "</font></b>" : part
+            i = j
+        }
+        return out
+    }
+
+    // Header path: "Desktop › Style › Wallpaper" in menu mode, each earlier
+    // step clickable; otherwise just the title.
+    readonly property var crumbs: mode !== "menu"
+        ? [{ label: title, depth: -1 }]
+        : [{ label: "Desktop", depth: 0 }].concat(
+              stack.map((id, i) => ({ label: menu.entries[id] ? menu.entries[id].label : id, depth: i + 1 })))
+
+    function jumpTo(depth) {
+        if (depth < 0 || depth >= stack.length)
+            return
+        stack = stack.slice(0, depth)
+        search.text = ""
+        cursor = 0
+    }
+
+    // Slide the rows in from the side we are heading towards when entering
+    // or leaving a submenu.
+    property int shownDepth: 0
+    onRouteChanged: {
+        const depth = stack.length
+        if (shown && mode === "menu" && depth !== shownDepth) {
+            rowsSlide.from = depth > shownDepth ? 36 : -36
+            rowsIn.restart()
+        }
+        shownDepth = depth
+    }
+
     // ---- window ------------------------------------------------------------------
 
-    MouseArea {
+    // Dimmed backdrop. Its alpha stays under the Hyprland layer rule's
+    // ignore_alpha (hypr/rules.lua), so only the card itself gets blurred.
+    Rectangle {
         anchors.fill: parent
-        onClicked: root.close()
+        color: Qt.rgba(0, 0, 0, Theme.dark ? 0.32 : 0.18)
+        opacity: root.shown ? 1 : 0
+
+        Behavior on opacity { NumberAnimation { duration: 160 } }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.close()
+        }
+    }
+
+    RectangularShadow {
+        anchors.fill: card
+        radius: card.radius
+        offset.y: 14
+        blur: 44
+        spread: -2
+        color: Qt.rgba(0, 0, 0, Theme.dark ? 0.45 : 0.22)
+        opacity: card.opacity
+        scale: card.scale
+        transformOrigin: card.transformOrigin
     }
 
     Rectangle {
@@ -340,13 +450,16 @@ PanelWindow {
         width: Math.min(wanted, parent.width - 40)
         height: layout.implicitHeight + 32
         radius: 18
-        color: Theme.background
+        color: Theme.card
         border.width: 1
-        border.color: Theme.alpha(Theme.outline, 0.3)
+        border.color: Theme.alpha(Theme.foreground, Theme.dark ? 0.09 : 0.12)
         opacity: root.shown ? 1 : 0
+        scale: root.shown ? 1 : 0.96
+        transformOrigin: Item.Top
 
-        Behavior on opacity { NumberAnimation { duration: 120 } }
-        Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+        Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
 
         MouseArea { anchors.fill: parent }
 
@@ -380,7 +493,7 @@ PanelWindow {
                         text: "󰁍"
                         font.family: Theme.iconFont
                         font.pixelSize: 15
-                        color: Theme.muted
+                        color: backHover.hovered ? Theme.foreground : Theme.dimText
                     }
 
                     MouseArea {
@@ -390,40 +503,86 @@ PanelWindow {
                     }
                 }
 
-                Text {
-                    text: root.title
-                    color: Theme.foreground
-                    font.pixelSize: 15
-                    font.weight: Font.DemiBold
-                    elide: Text.ElideRight
+                // Breadcrumbs; the clip keeps a deep path from pushing the
+                // item count off the card.
+                Item {
                     Layout.fillWidth: true
+                    implicitHeight: crumbRow.implicitHeight
+                    clip: true
+
+                    Row {
+                        id: crumbRow
+                        spacing: 6
+
+                        Repeater {
+                            model: root.crumbs
+
+                            Row {
+                                id: crumb
+
+                                required property var modelData
+                                required property int index
+                                readonly property bool last: index === root.crumbs.length - 1
+
+                                spacing: 6
+
+                                Text {
+                                    visible: crumb.index > 0
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "›"
+                                    color: Theme.faintText
+                                    font.pixelSize: 15
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: crumb.modelData.label
+                                    color: crumb.last ? Theme.foreground
+                                         : crumbHover.hovered ? Theme.foreground : Theme.dimText
+                                    font.pixelSize: 15
+                                    font.weight: crumb.last ? Font.DemiBold : Font.Normal
+
+                                    HoverHandler {
+                                        id: crumbHover
+                                        enabled: !crumb.last && crumb.modelData.depth >= 0
+                                        cursorShape: Qt.PointingHandCursor
+                                    }
+
+                                    TapHandler {
+                                        enabled: crumbHover.enabled
+                                        onTapped: root.jumpTo(crumb.modelData.depth)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Text {
                     visible: !root.inputOnly
                     text: root.rows.length === 1 ? "1 item" : root.rows.length + " items"
-                    color: Theme.alpha(Theme.muted, 0.8)
+                    color: Theme.faintText
                     font.pixelSize: 11
                 }
             }
 
             Rectangle {
                 Layout.fillWidth: true
-                implicitHeight: 42
+                implicitHeight: 44
                 radius: 12
-                color: Theme.alpha(Theme.foreground, 0.06)
+                color: Theme.alpha(Theme.foreground, Theme.dark ? 0.06 : 0.05)
                 border.width: 1
-                border.color: Theme.alpha(Theme.primary, 0.45)
+                border.color: Theme.alpha(Theme.foreground, Theme.dark ? 0.12 : 0.16)
 
                 Text {
                     id: searchIcon
                     anchors.left: parent.left
-                    anchors.leftMargin: 13
+                    anchors.leftMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.inputOnly ? "󰞷" : "󰍉"
                     font.family: Theme.iconFont
                     font.pixelSize: 16
-                    color: Theme.muted
+                    color: search.text !== "" ? Theme.foreground : Theme.dimText
                 }
 
                 TextInput {
@@ -473,7 +632,7 @@ PanelWindow {
                         visible: search.text === ""
                         anchors.verticalCenter: parent.verticalCenter
                         text: root.placeholder
-                        color: Theme.muted
+                        color: Theme.faintText
                         font.pixelSize: 14
                         elide: Text.ElideRight
                         width: parent.width
@@ -484,7 +643,7 @@ PanelWindow {
             Text {
                 visible: root.mode === "select" && root.request !== null && !!root.request.message
                 text: root.request && root.request.message ? root.request.message : ""
-                color: Theme.muted
+                color: Theme.dimText
                 font.pixelSize: 12
                 wrapMode: Text.Wrap
                 Layout.fillWidth: true
@@ -504,24 +663,75 @@ PanelWindow {
                 model: root.rows
                 currentIndex: root.cursor
                 boundsBehavior: Flickable.StopAtBounds
-                highlightMoveDuration: 0
                 spacing: 2
+
+                // The highlight is drawn once and slides between rows.
+                highlightFollowsCurrentItem: true
+                highlightMoveDuration: 140
+                highlightMoveVelocity: -1
+                highlightResizeDuration: 140
+                highlightResizeVelocity: -1
+
+                highlight: Rectangle {
+                    visible: list.count > 0
+                    radius: 11
+                    color: Theme.alpha(Theme.foreground, Theme.dark ? 0.07 : 0.06)
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: Theme.alpha(Theme.primary, 0.18)
+                        border.width: 1
+                        border.color: Theme.alpha(Theme.primary, 0.4)
+                    }
+
+                    // Accent bar on the leading edge.
+                    Rectangle {
+                        x: 5
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 3
+                        height: parent.height - 20
+                        radius: 2
+                        color: Theme.primary
+                    }
+                }
+
+                transform: Translate { id: rowsShift }
+
+                ParallelAnimation {
+                    id: rowsIn
+
+                    NumberAnimation {
+                        id: rowsSlide
+                        target: rowsShift
+                        property: "x"
+                        to: 0
+                        duration: 180
+                        easing.type: Easing.OutCubic
+                    }
+
+                    NumberAnimation {
+                        target: list
+                        property: "opacity"
+                        from: 0
+                        to: 1
+                        duration: 160
+                        easing.type: Easing.OutCubic
+                    }
+                }
 
                 onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
 
-                delegate: Rectangle {
+                delegate: Item {
                     id: row
 
                     required property var modelData
                     required property int index
                     readonly property bool current: index === root.cursor
+                    readonly property bool isApp: !!modelData.image
 
                     width: ListView.view.width
-                    implicitHeight: modelData.detail ? 52 : 42
-                    radius: 11
-                    color: current ? Theme.alpha(Theme.primary, 0.16) : "transparent"
-                    border.width: current ? 1 : 0
-                    border.color: Theme.alpha(Theme.primary, 0.35)
+                    implicitHeight: modelData.detail ? 54 : 44
 
                     MouseArea {
                         anchors.fill: parent
@@ -541,28 +751,40 @@ PanelWindow {
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 12
+                        anchors.leftMargin: 16
                         anchors.rightMargin: 12
                         spacing: 12
 
                         Item {
                             visible: row.modelData.icon !== "" || row.modelData.image !== undefined
-                            implicitWidth: 26
-                            implicitHeight: 26
+                            implicitWidth: 32
+                            implicitHeight: 32
+
+                            // Glyphs sit on a tinted tile, like PanelHeader's
+                            // icon; app icons bring their own shape.
+                            Rectangle {
+                                anchors.fill: parent
+                                visible: !row.isApp
+                                radius: 9
+                                color: row.current ? Theme.alpha(Theme.primary, 0.3)
+                                                   : Theme.alpha(Theme.foreground, Theme.dark ? 0.06 : 0.07)
+
+                                Behavior on color { ColorAnimation { duration: 120 } }
+                            }
 
                             Text {
                                 anchors.centerIn: parent
-                                visible: !appIcon.visible
+                                visible: !row.isApp
                                 text: row.modelData.icon || (row.modelData.kind === "app" ? "󰀻" : "")
                                 font.family: Theme.iconFont
-                                font.pixelSize: root.mode === "select" && root.request && root.request.iconColumn ? 21 : 18
-                                color: row.current ? Theme.primary : Theme.foreground
+                                font.pixelSize: root.mode === "select" && root.request && root.request.iconColumn ? 19 : 16
+                                color: row.current ? Theme.foreground : Theme.alpha(Theme.foreground, 0.8)
                             }
 
                             IconImage {
-                                id: appIcon
-                                anchors.fill: parent
-                                visible: !!row.modelData.image
+                                anchors.centerIn: parent
+                                implicitSize: 28
+                                visible: row.isApp
                                 source: row.modelData.image || ""
                                 asynchronous: true
                             }
@@ -570,11 +792,16 @@ PanelWindow {
 
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 1
+                            spacing: 2
 
                             Text {
-                                text: row.modelData.label
-                                color: Theme.foreground
+                                text: root.markMatch(row.modelData.label)
+                                textFormat: Text.StyledText
+                                // While searching the unmatched letters step
+                                // back so the matched ones stand out.
+                                color: search.text.trim() !== "" ? Theme.alpha(Theme.foreground, 0.72)
+                                     : row.current ? Theme.foreground
+                                     : Theme.alpha(Theme.foreground, 0.9)
                                 font.pixelSize: 13
                                 font.weight: row.current ? Font.DemiBold : Font.Normal
                                 elide: Text.ElideRight
@@ -584,7 +811,7 @@ PanelWindow {
                             Text {
                                 visible: text !== ""
                                 text: row.modelData.detail || ""
-                                color: Theme.muted
+                                color: row.current ? Theme.alpha(Theme.foreground, 0.65) : Theme.dimText
                                 font.pixelSize: 11
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
@@ -596,13 +823,13 @@ PanelWindow {
                             implicitWidth: stateLabel.implicitWidth + 16
                             implicitHeight: 20
                             radius: 10
-                            color: row.modelData.trailing === "on" ? Theme.alpha(Theme.primary, 0.22) : Theme.alpha(Theme.foreground, 0.07)
+                            color: row.modelData.trailing === "on" ? Theme.alpha(Theme.primary, 0.3) : Theme.alpha(Theme.foreground, 0.07)
 
                             Text {
                                 id: stateLabel
                                 anchors.centerIn: parent
                                 text: row.modelData.trailing === "on" ? "On" : "Off"
-                                color: row.modelData.trailing === "on" ? Theme.primary : Theme.muted
+                                color: row.modelData.trailing === "on" ? Theme.foreground : Theme.dimText
                                 font.pixelSize: 10
                                 font.weight: Font.DemiBold
                             }
@@ -613,23 +840,34 @@ PanelWindow {
                             text: "󰅂"
                             font.family: Theme.iconFont
                             font.pixelSize: 15
-                            color: Theme.muted
+                            color: row.current ? Theme.foreground : Theme.faintText
                         }
                     }
                 }
             }
 
-            Text {
+            ColumnLayout {
                 visible: !root.inputOnly && root.rows.length === 0
                 Layout.fillWidth: true
-                Layout.topMargin: 6
-                Layout.bottomMargin: 6
-                horizontalAlignment: Text.AlignHCenter
-                text: "Nothing matches"
-                color: Theme.muted
-                font.pixelSize: 12
-            }
+                Layout.topMargin: 10
+                Layout.bottomMargin: 10
+                spacing: 6
 
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "󰈞"
+                    font.family: Theme.iconFont
+                    font.pixelSize: 26
+                    color: Theme.faintText
+                }
+
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "Nothing matches"
+                    color: Theme.dimText
+                    font.pixelSize: 12
+                }
+            }
         }
     }
 }

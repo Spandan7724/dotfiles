@@ -1,0 +1,22 @@
+# Desktop entries kept out of the app launcher (Menu.qml), one id per line:
+# the .desktop file name, with or without the extension. Changes apply live.
+
+# Pulled in as dependencies; not apps anyone launches.
+xfce4-about
+avahi-discover
+bssh
+bvnc
+cmake-gui
+lstopo
+qv4l2
+qvidcap
+xgps
+xgpsspeed
+uuctl
+
+# Rofi is installed but the Quickshell menu replaces it.
+rofi
+rofi-theme-selector
+
+# Reached through Setup or the bar instead.
+blueman-adapters

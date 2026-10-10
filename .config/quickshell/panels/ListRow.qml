@@ -17,11 +17,13 @@ Rectangle {
     signal clicked()
     signal actionClicked()
 
-    implicitHeight: 46
+    implicitHeight: 50
     radius: 10
     color: active ? Theme.alpha(Theme.primary, 0.16)
          : hover.hovered ? Theme.alpha(Theme.foreground, 0.07)
          : "transparent"
+
+    Behavior on color { ColorAnimation { duration: 120 } }
 
     HoverHandler { id: hover }
 
@@ -37,13 +39,23 @@ Rectangle {
         anchors.rightMargin: 10
         spacing: 12
 
-        Text {
-            text: root.icon
-            font.family: Theme.iconFont
-            font.pixelSize: 18
-            color: root.active ? Theme.primary : Theme.foreground
-            Layout.preferredWidth: 22
-            horizontalAlignment: Text.AlignHCenter
+        // Glyph on a tinted tile, matching the menu rows and PanelHeader.
+        Rectangle {
+            implicitWidth: 30
+            implicitHeight: 30
+            radius: 9
+            color: root.active ? Theme.alpha(Theme.primary, 0.3)
+                               : Theme.alpha(Theme.foreground, Theme.dark ? 0.06 : 0.07)
+
+            Behavior on color { ColorAnimation { duration: 120 } }
+
+            Text {
+                anchors.centerIn: parent
+                text: root.icon
+                font.family: Theme.iconFont
+                font.pixelSize: 15
+                color: root.active ? Theme.foreground : Theme.alpha(Theme.foreground, 0.8)
+            }
         }
 
         ColumnLayout {
@@ -62,7 +74,7 @@ Rectangle {
             Text {
                 visible: text !== ""
                 text: root.busy ? "Working…" : root.subtitle
-                color: root.active ? Theme.primary : Theme.muted
+                color: root.active ? Theme.alpha(Theme.foreground, 0.7) : Theme.dimText
                 font.pixelSize: 11
                 elide: Text.ElideRight
                 Layout.fillWidth: true
@@ -82,7 +94,7 @@ Rectangle {
                 id: actionLabel
                 anchors.centerIn: parent
                 text: root.actionText
-                color: actionHover.hovered ? Theme.error : Theme.muted
+                color: actionHover.hovered ? Theme.error : Theme.dimText
                 font.pixelSize: 11
             }
 
@@ -98,7 +110,7 @@ Rectangle {
             text: root.trailingIcon
             font.family: Theme.iconFont
             font.pixelSize: 13
-            color: Theme.muted
+            color: Theme.faintText
         }
     }
 }
