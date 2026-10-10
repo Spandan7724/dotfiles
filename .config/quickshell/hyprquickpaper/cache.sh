@@ -17,7 +17,8 @@ echo "Cache path: $cache_path"
 find "$wallpaper_path" -type f \( \
     -iname "*.jpg" -o \
     -iname "*.jpeg" -o \
-    -iname "*.png" \
+    -iname "*.png" -o \
+    -iname "*.webp" \
 \) | while read -r img; do
 
     filename=$(basename "$img")
