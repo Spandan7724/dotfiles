@@ -4,7 +4,7 @@ Personal tiled Hyprland desktop configuration for a fresh Arch Linux
 installation. Normal application windows use the dwindle layout, while utility
 windows and file dialogs float where appropriate.
 
-The desktop stack uses Waybar, Rofi, Quickshell, Hyprlock, Wlogout, Dunst,
+The desktop stack uses Waybar, Quickshell, Hyprlock, Dunst,
 Kitty, Thunar, PipeWire, Fish or Zsh, Starship, and Matugen for
 wallpaper-derived colors.
 
@@ -149,6 +149,57 @@ Doom itself into `~/.config/emacs` and runs `doom install --no-config`, which
 builds the packages without touching that configuration. After changing
 `init.el` or `packages.el`, run `doom sync`.
 
+## Virtual machines
+
+`Super + Shift + V` (or Setup → Virtual machines in the desktop menu) opens a
+themed virtual machine manager built with Quickshell
+(`.config/quickshell/vm-manager`). It lists every libvirt VM on
+`qemu:///system` with its state and resources, and offers Console, Shut down,
+Reboot, Force stop, Start, Settings (virt-manager's editor) and Delete.
+
+**New VM** creates a machine in two ways:
+
+- **Download an OS**: pick from quickget's catalogue of about 90 systems and
+  700 releases (Ubuntu, Fedora, Arch, Debian, Windows 10/11, the BSDs, and so
+  on). The installer ISO is downloaded, with a progress bar, and the VM boots
+  straight into it. Windows comes directly from Microsoft.
+- **Use an ISO**: pick an ISO from `~/Downloads`, one downloaded earlier, or
+  type a path.
+
+Sensible defaults are filled in and can be adjusted: 2 vCPU, 4 GB and 30 GB
+for Linux, and 4 vCPU, 8 GB and 80 GB for Windows. Linux VMs use UEFI with
+Secure Boot off (many live ISOs are unsigned); Windows gets UEFI, Secure Boot
+and an emulated TPM 2.0, as Windows 11 requires. Legacy BIOS is available for
+old systems.
+
+**Display** offers 3D acceleration (the default for everything except Windows):
+a virtio GPU with virgl, rendered through SPICE's local OpenGL path on the host
+GPU. Wayland desktops such as Hyprland (and so Omarchy), GNOME and KDE need it
+to run smoothly. On a hybrid laptop the integrated GPU renders it, because
+virgl works poorly with NVIDIA's proprietary driver. Windows has no virgl
+driver and always gets the basic display. Consoles open with
+`virt-viewer --attach`, which is the only way into a 3D VM because its SPICE
+display has no network listener.
+
+A 3D VM is also given the host monitor's physical resolution (3200×2000 on this
+laptop) as its preferred display mode, and its console opens with
+`--auto-resize=never`. On a HiDPI host, auto-resize would ask the guest for the
+window's logical size (half the real pixels at 2× scaling) and stretch the
+result, which looks blurry. Rendering at full resolution lets the guest apply
+its own 2× scaling, so it looks like the host screen. Press F11 in the console
+for full screen.
+
+ISOs are uploaded into a libvirt storage pool named `vm-isos`
+(`/var/lib/libvirt/isos`) rather than read from the home directory, which QEMU
+cannot access. This needs no sudo, only membership of the `libvirt` group,
+which the installer sets up. An ISO is reused by later VMs of the same
+release, and deleting a VM removes its disks but keeps the ISO. Downloads run
+in the background, so the window can be closed meanwhile.
+
+Everything is ordinary libvirt, so `virt-manager` and `virsh` see the same
+machines. The backend is `vmctl.sh`, which can also be used directly, for
+example `vmctl.sh list`.
+
 ## Reboot to Windows
 
 On a machine that also has Windows Boot Manager, Power → Windows in the desktop
@@ -164,12 +215,16 @@ through a sudoers rule limited to its `set` and `clear` arguments.
 `Super + Shift + T` opens the theme selector. A fresh install starts on
 `wallpaper-dark` with `wallpaper-19.jpg`. Other profiles include:
 
-- `monochrome-dark`
-- `monochrome-light`
+- `gruvbox-dark`, `everforest`, `tokyo-night`
+- `monochrome-dark`, `monochrome-light`
+- `solitude`, `vantablack` (palettes from Omarchy)
+- `wallpaper-light`
 
 Switching profiles coordinates Kitty, Waybar, Rofi, Dunst, Hyprlock, Wlogout,
 GTK 3/4, Starship, the system light/dark preference, the Papirus icon variant,
-and the wallpaper. GTK uses its supported theme and
+and the wallpaper. Named profiles also theme Thunar, the Quickshell panels,
+Hyprland window borders, Neovim (NvChad), Doom Emacs, Helix, and btop; the
+wallpaper profiles leave those on their defaults. GTK uses its supported theme and
 color-preference settings rather than global widget CSS overrides. The switcher
 can also be run directly:
 
@@ -196,6 +251,26 @@ generated monolith:
 | Dunst | `dunstrc.d/50-theme.conf` drop-in | `dunstrc.d/90-colors.conf` drop-in |
 | Hyprlock | `source =` | `source =` |
 | Starship | symlink into `themes/current` | not recolored |
+| Thunar | `gtk-3.0/gtk.css` imports `thunar.css` | `thunar-colors.css` |
+| Quickshell | `quickshell.json` copied over `theme.json` | `theme.json` |
+| Hyprland borders | `hyprland.lua` loaded by `hypr/hyprland.lua` | not recolored |
+| Neovim (NvChad) | `nvim.lua` names a base46 theme, `base46.lua` for custom ones | not recolored |
+| Doom Emacs | `doom.el` sets `doom-theme`, `doom-palette.el` for custom ones | not recolored |
+| Helix, btop | `helix.toml`, `btop.theme` linked as the `dotfiles` theme | not recolored |
+
+The newer app files come from each profile's `colors.toml` (Omarchy's palette
+format). Its `[apps]` table names a matching built-in theme, such as NvChad's
+`gruvbox` or Doom's `doom-tokyo-night`; apps without one get a theme generated
+from the palette. After editing a palette, regenerate and re-apply:
+
+```bash
+~/.config/themes/generate.py everforest          # app files only
+~/.config/themes/generate.py my-theme --all      # a new theme: every file
+~/.config/themes/apply.sh everforest
+```
+
+The switcher reloads Hyprland, Helix, every running Neovim, and a running Emacs
+server. Thunar and btop pick the theme up the next time they open.
 
 Dunst reads `dunstrc.d/*.conf` in lexical order after the base `dunstrc` and
 lets the later file win, so `50-theme.conf` carries the profile and
@@ -237,25 +312,29 @@ The theme implementation follows each application's native format:
 | `Super + T` | Open the default terminal |
 | `Super + D` | Open the dedicated applications menu |
 | `Super + E` | Open the default file manager |
+| `Super + Shift + N` | Open notes: a new Markdown note in `~/notes` in Doom Emacs, or the notes app chosen under Defaults |
 | `Super + B` | Open the default browser |
+| `Super + Shift + Return` | Open Doom Emacs (starts the Emacs daemon if needed) |
 | `Super + R` | Search files |
 | `Super + Shift + D` | Search the web |
 | `Super + =` | Calculate and copy the result |
 | `Super + ;` | Choose and copy an emoji or symbol |
-| `Super + X` | Open quick settings |
-| `Super + F1` | Show the searchable shortcut guide |
+| `Super + Alt + X` | Open quick settings |
+| `Super + F1` / `Super + /` | Show the keyboard shortcut cheatsheet |
 | `Super + A` | Open audio settings |
+| `Super + Shift + A` | Pick a folder (Enter alone = home) and start the default coding agent there; choose Claude Code, Codex, OpenCode, or Amp under Defaults |
 | `Super + Q` | Close active window |
 | `Super + Shift + Q` | Force-kill active window |
 | `Super + F` | Toggle fullscreen |
 | `Super + M` | Toggle maximize |
 | `Super + Space` | Toggle floating and tiled state |
 | `Super + Shift + Space` | Toggle every window on the workspace between floating and tiled |
-| `Super + C` | Center a floating window |
+| `Super + Alt + C` | Center a floating window |
 | `Super + P` | Toggle pseudotile |
 | `Super + Shift + P` | Pin a floating window |
-| `Super + O` | Cycle active-window opacity |
-| `Super + \` | Toggle dwindle split direction |
+| `Super + O` | Pop a window out (float, center, and pin); press again to tile it |
+| `Super + Shift + O` | Cycle active-window opacity |
+| `Super + J` / `Super + \` | Toggle the split direction |
 | `Super + Arrow` | Focus in a direction |
 | `Super + Shift + Arrow` | Move in a direction |
 | `Super + Alt + Arrow` | Swap tiled windows |
@@ -292,12 +371,13 @@ The theme implementation follows each application's native format:
 | `Super + Shift + /` | Open or focus HyprMod advanced settings |
 | `Super + Escape` / `Super + Alt + Space` / `Super + F2` | Open the unified desktop control menu |
 | `Super + Shift + W` | Toggle Waybar |
-| `Super + V` | Search clipboard history and paste the selected text or image |
+| `Super + C` / `Super + V` / `Super + X` | Universal copy / paste / cut (works in terminals too) |
+| `Super + Ctrl + V` | Search clipboard history and paste the selected text or image |
 | `Super + Ctrl + T` | Transcode a picture or video |
 | `Super + Ctrl + P` | Open the package-manager TUI |
 | `Super + Ctrl + D` | Choose default applications |
 | `Super + Ctrl + E` | Open the default code editor |
-| `Super + Shift + V` | Open the virtual-machine menu |
+| `Super + Shift + V` | Open or close the virtual machine manager |
 | `Super + L` | Lock with Hyprlock |
 | `Super + Grave` | Open the lock, sleep, hibernate, logout, restart, and shutdown menu |
 | `Super + Shift + E` | Exit Hyprland |
@@ -310,9 +390,10 @@ The theme implementation follows each application's native format:
 | `Super + Alt + Print` | Capture the full screen after five seconds |
 | `Super + Shift + R` | Start or stop a selected-region screen recording |
 | `Super + Shift + C` | Pick and copy a color |
-| `Super + Shift + N` | Show the last notification from history |
+| `Super + Ctrl + Alt + N` | Show the last notification from history |
 | `Super + Ctrl + N` | Toggle do not disturb |
-| `Super + Ctrl + W/B` | Open network / Bluetooth settings |
+| `Super + Ctrl + W/B` | Open the Wi-Fi / Bluetooth panel |
+| `Super + Ctrl + S` | Open the display panel (brightness, scale, text size) |
 | `Super + Ctrl + R` | Reload Hyprland and Waybar |
 | `XF86MonBrightnessUp/Down` | Adjust brightness |
 | `XF86AudioRaise/LowerVolume` | Adjust volume |
@@ -331,50 +412,49 @@ Its workspace module shows occupied workspaces and the active workspace instead
 of reserving room for all ten. The Arch button opens the desktop control menu;
 the Search pill opens the dedicated applications launcher.
 
-The desktop menu follows a compact hierarchy. **Capture** holds screenshots
-(region, window, full screen, delayed, annotate, to clipboard), screen
-recording, OCR, and the colour picker; **Style** holds the theme, wallpapers,
-opacity, the bar, and reload; **Setup** doubles as quick settings and holds
-defaults, Wi-Fi, Bluetooth, audio, brightness, night light, displays, the power
-profile, packages, virtual machines, fingerprint, and advanced Hyprland
-settings; **Tools** holds clipboard, calculator, emoji, file and web search,
-transcoding, and monitoring. **Setup › Screen and lock** sets the idle
-timeouts — when the session locks, when the screen blanks, when the machine
-suspends — plus an immediate lock and a keep-awake hold. Right-clicking the Waybar settings icon opens the
-Defaults menu directly.
+All menus are drawn by Quickshell, in the same long-running `panels` daemon as
+the Wi-Fi, Bluetooth, Display, and media pop-ups, so they share one look, follow
+the desktop theme, and open instantly. Rofi is no longer used.
 
-Labels are one or two words. Everything else a person might type — `wallpaper`,
-`ocr`, `qemu`, `poweroff` — lives in a keywords column that is searched but
-never shown.
+**Desktop menu** (`Super + Escape`, the Arch button). **Capture** holds
+screenshots, screen recording, text capture (OCR), and the colour picker;
+**Style** holds the theme, wallpapers, opacity, the bar, and reload; **Setup**
+doubles as quick settings and holds Wi-Fi, Bluetooth, audio, display, monitor
+layout, night light, screen and lock, the power profile, default apps,
+packages, virtual machines, fingerprint, and advanced Hyprland settings;
+**Tools** holds clipboard, calculator, emoji, coding agent, notes, file and web
+search, transcoding, and the system monitor. Every row has a one-line
+description, and toggles such as the menu bar, night light, and screen
+recording show whether they are on.
 
-The root lists the categories and also indexes every action in the tree, so a
-search resolves to the thing itself rather than to the category containing it:
-typing `theme` gives **Theme**, with a dim **Style** under it saying where it
-lives. An indexed row leads with its own name and carries its path as a second
-line, the way the Omarchy menu does it, rather than spelling out
-`Style › Theme` inline. Category rows have nothing to put on that second line
-and stay one line, centred. Category rows carry no
-keywords, which is what makes that work — a category matching `ocr` would
-otherwise rank alongside the leaf that actually does it. For the same reason
-categories carry no descriptive subtitle: the words in one would match, and
-`theme` would surface **Style** all over again. Matching is
-substring-per-token rather than fuzzy: fuzzy matched scattered letters across
-the hidden keyword column, so `idle` buried the one row that says idle under
-every row containing an i, d, l and e. Submenus are marked with a `›` in a
-column of their own; Escape steps back one level rather than closing the menu,
-and pressing the menu key again closes it outright.
+Searching from the top level looks through every submenu and every installed
+app, and shows where each result lives. Matching is per word: label matches
+rank above keyword and description matches, and a match at the start of a word
+ranks above one inside it. Arrow keys or Ctrl+J/K move, Enter or → opens,
+← or Backspace goes back, Escape clears the search, then steps back, then
+closes, and pressing the menu key again closes it outright.
 
-Rows whose program is not installed, or whose hardware is absent, are hidden
-rather than listed and broken. Hibernate, for instance, only appears when a
-non-zram swap device and suspend-to-disk are both available.
+The menu is defined in `.config/quickshell/panels/menu.json`. Ids are dotted
+paths (`setup.audio` sits under Setup) and an entry without an `action` is a
+submenu. `when` hides a row whose shell test fails (so missing programs are
+never listed), and `state` shows On/Off from a shell test; both are answered by
+one batched shell process each time the menu opens. The file is watched, so
+edits apply without a restart.
 
-The whole menu is one declarative table at the top of
-`.config/hypr/scripts/desktop-menu.sh` — `parent | id | icon | label | keywords
-| action | when` — rendered by a single generic pass. Adding an entry is one
-line. Selection is dispatched on the hidden `id` column rather than on the
-visible label, so rewording a row cannot break its action. `power-menu.sh` and
-`control-center.sh` are thin wrappers onto the `power` and `setup` routes, so
-the standalone bindings and the menu can never drift apart.
+**App launcher** (`Super + D`, the Search pill) lists installed applications
+with their icons, most-used first.
+
+**Session screen** (`Super + Grave`, the bar's power button) is a full-screen
+grid: Lock, Suspend, Hibernate, Log out, Restart, Windows, Firmware, and Shut
+down, each with a letter shortcut. Actions that end the session need a second
+press. It shows uptime and battery and warns when a package manager or a
+download is still running. Its logic lives in `hypr/scripts/session.sh`.
+
+**Pickers.** `hypr/scripts/menu-select` is a drop-in for `rofi -dmenu`: it
+reads choices on stdin and prints the chosen line, so the defaults, theme,
+coding agent, clipboard, emoji, file search, calculator, and other pickers are
+ordinary shell scripts. It supports tab-separated hidden columns
+(`-display-columns`), an icon column, custom text, and plain text prompts.
 
 The Defaults menu configures the terminal, login shell, browser, editor, file
 manager, PDF viewer, image viewer, and video player. It updates both the
@@ -387,8 +467,12 @@ the centered search pill to open the workspace overview.
 
 ## Graphical shortcut management
 
-`Super + /` opens a fast searchable guide generated from the bindings that
-Hyprland actually loaded. `Super + Shift + /` opens or focuses HyprMod when a
+`Super + F1` or `Super + /` opens a cheatsheet generated from the bindings
+Hyprland actually loaded, grouped into categories in masonry columns, with
+number and direction families collapsed into one row (`Super + 1 – 0`,
+`Super + ← ↓ ↑ →`). Typing filters it. Categories come from `section()` calls in
+`.config/hypr/keybinds.lua`, which store the category as a prefix on each
+bind's description. `Super + Shift + /` opens or focuses HyprMod when a
 graphical editor is needed. Its Keybindings page can inspect, capture, add,
 edit, and remove shortcuts using Hyprland's native Lua configuration format.
 

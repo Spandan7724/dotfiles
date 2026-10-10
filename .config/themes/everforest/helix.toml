@@ -1,0 +1,2 @@
+# Helix theme for this theme, used as helix/themes/dotfiles.toml.
+inherits = "everforest_dark"

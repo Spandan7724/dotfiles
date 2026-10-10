@@ -2,7 +2,6 @@
 
 set -euo pipefail
 helper=/usr/local/libexec/dotfiles-power-profile-root
-menu_theme="$HOME/.config/rofi/menu.rasi"
 
 profile="${1:-menu}"
 if [[ "$profile" == menu ]]; then
@@ -21,8 +20,7 @@ if [[ "$profile" == menu ]]; then
         row power-saver '󰌪' 'Power saver' 'quiet, GPU held at 55 W'
         row balanced    '󰾅' 'Balanced'    'dynamic GPU budget near 80 W'
         row performance '󰓅' 'Performance' 'Dynamic Boost up to 130 W'
-    } | rofi -dmenu -i -no-custom -p 'Power profile' -display-columns 1 \
-        -theme "$menu_theme" -theme-str 'window { width: 480px; }')" || exit 0
+    } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Power profile' -display-columns 1)" || exit 0
 
     profile="${selection#*$'\t'}"
     [[ -n "$profile" && "$profile" != "$selection" ]] || exit 0

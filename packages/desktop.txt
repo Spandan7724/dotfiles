@@ -123,6 +123,7 @@ usbutils
 # Virtual machines
 virt-manager
 virt-viewer
+quickemu
 qemu-desktop
 libvirt
 dnsmasq

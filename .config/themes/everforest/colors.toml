@@ -1,0 +1,26 @@
+# Palette for the generated app themes (themes/generate.py); see gruvbox-dark.
+mode = "dark"
+
+background = "#2d353b"
+dark_background = "#232a2e"
+lighter_background = "#343f44"
+selection = "#3d484d"
+
+foreground = "#d3c6aa"
+light_foreground = "#e4dbc4"
+bright_foreground = "#fff9e8"
+muted = "#859289"
+accent = "#7fbbb3"
+
+red = "#e67e80"
+orange = "#e69875"
+yellow = "#dbbc7f"
+green = "#a7c080"
+cyan = "#83c092"
+blue = "#7fbbb3"
+magenta = "#d699b6"
+
+[apps]
+nvchad = "everforest"
+helix = "everforest_dark"
+btop = "everforest-dark-medium"

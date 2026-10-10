@@ -64,5 +64,44 @@ if [[ -r "$wallpaper_state" ]]; then
     [[ -f "$wallpaper" ]] && "$themes_root/wallpaper.sh" "$wallpaper" "$mode"
 fi
 
+# Named themes ship a Quickshell palette (wallpaper.sh also restores it after
+# Matugen runs, but it only runs when a wallpaper has been chosen).
+if [[ -f "$theme_dir/quickshell.json" ]]; then
+    cp -f -- "$theme_dir/quickshell.json" "$config_root/quickshell/theme.json"
+fi
+
+# Helix and btop look themes up by name; "dotfiles" points at the current one.
+mkdir -p "$config_root/helix/themes" "$config_root/btop/themes"
+ln -sfn ../../themes/current/helix.toml "$config_root/helix/themes/dotfiles.toml"
+ln -sfn ../../themes/current/btop.theme "$config_root/btop/themes/dotfiles.theme"
+
+# The rest reaches running applications. Every step is best effort.
+
+# Hyprland: hyprland.lua loads the theme's border colors on reload.
+hyprctl reload >/dev/null 2>&1 || true
+
+# Helix re-reads its config and theme on SIGUSR1.
+pkill -USR1 -x helix 2>/dev/null || true
+
+# NvChad compiles its theme into a highlight cache that every Neovim loads at
+# startup. Rebuild it headlessly, then have running instances load it.
+if command -v nvim >/dev/null 2>&1; then
+    nvim --headless -c 'lua require("base46").load_all_highlights()' -c 'qa!' >/dev/null 2>&1 || true
+    reload_lua='(function() for _, f in ipairs(vim.fn.readdir(vim.g.base46_cache)) do dofile(vim.g.base46_cache .. f) end end)()'
+    for server in "${XDG_RUNTIME_DIR:-/tmp}"/nvim.*; do
+        [[ -S "$server" ]] || continue
+        timeout 2 nvim --server "$server" --remote-expr "luaeval('$reload_lua')" >/dev/null 2>&1 || true
+    done
+fi
+
+# Doom Emacs: reload the theme in a running Emacs server.
+if command -v emacsclient >/dev/null 2>&1 && timeout 2 emacsclient -a false -e t >/dev/null 2>&1; then
+    timeout 5 emacsclient -e '(progn
+        (load (expand-file-name "~/.config/themes/current/doom.el") t t)
+        (mapc (function disable-theme) custom-enabled-themes)
+        (load-theme doom-theme t)
+        t)' >/dev/null 2>&1 || true
+fi
+
 printf 'Applied theme: %s\n' "$theme"
-printf 'Already-running GTK applications, including Thunar, may need to be reopened.\n'
+printf 'Thunar and btop windows that are already open pick the theme up when reopened.\n'

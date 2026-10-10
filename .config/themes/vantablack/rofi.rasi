@@ -1,0 +1,5 @@
+* {
+    bg: #000000f2; bg-alt: #1a1a1aff; bg-hover: #1a1a1aff; bg-selected: #1a1a1aff;
+    fg: #ffffffff; fg-muted: #7a7a7aff; fg-dark: #000000ff;
+    accent: #8d8d8dff; accent-soft: #8d8d8d44; urgent: #a4a4a4ff; border-color: #8d8d8d66;
+}

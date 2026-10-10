@@ -12,7 +12,8 @@
 set -uo pipefail
 
 readonly BATTERY_REFRESH=60
-readonly POLL_SECONDS=5
+# Retry delay after a failed mode change (a compositor still starting up).
+readonly RETRY_SECONDS=5
 
 ac_online() {
     local supply type
@@ -107,8 +108,12 @@ flock -n 9 || exit 0
 # A machine with no mains supply is a desktop; there is nothing to switch.
 has_mains || exit 0
 
+# Switch the panel to match the charger. Sets `pending` when the change could
+# not be applied yet, so the caller retries.
 last_state=""
-while true; do
+pending=0
+check() {
+    local state refresh name resolution
     if ac_online; then
         state="ac"
     else
@@ -133,11 +138,27 @@ while true; do
 
         # Do not record the transition unless the monitor change succeeded.
         # This makes startup races and temporary compositor errors retry on the
-        # next poll instead of remaining stuck until the charger state changes.
+        # next retry instead of remaining stuck until the charger state changes.
         if [[ -n "$refresh" ]] && apply_refresh "$refresh"; then
             last_state="$state"
+            pending=0
+        else
+            pending=1
         fi
     fi
+}
 
-    sleep "$POLL_SECONDS"
-done
+# Wake on the kernel's power-supply events (plugging in or out, battery
+# updates) rather than polling; wait with a timeout only while a mode change
+# still needs retrying.
+check
+while true; do
+    if ((pending)); then
+        read -r -t "$RETRY_SECONDS" line
+    else
+        read -r line
+    fi
+    status=$?
+    ((status == 0 || status > 128)) || break    # end of the event stream
+    check
+done < <(udevadm monitor --udev --subsystem-match=power_supply 2>/dev/null)

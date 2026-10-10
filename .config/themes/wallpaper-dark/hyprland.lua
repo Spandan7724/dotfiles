@@ -1,0 +1,1 @@
+-- Wallpaper themes keep Hyprland's default border colors.

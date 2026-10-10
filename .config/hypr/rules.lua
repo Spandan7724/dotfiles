@@ -8,6 +8,12 @@ hl.layer_rule({
     ignore_alpha = 0.15,
 })
 
+-- Quickshell's full-screen session screen and cheatsheet (quickshell/panels).
+hl.layer_rule({
+    match = { namespace = "dotfiles-overlay" },
+    blur = true,
+})
+
 -- Opacity rules: 90% for all windows except fullscreen
 hl.window_rule({
     match = { class = ".*" },
@@ -81,6 +87,14 @@ hl.window_rule({
     float = true,
     center = true,
     size = { "(monitor_w*0.78)", "(monitor_h*0.75)" },
+})
+
+hl.window_rule({
+    name = "float-vm-manager",
+    match = { class = "^(org.quickshell)$", title = "^(Virtual machines)$" },
+    float = true,
+    center = true,
+    size = { "(monitor_w*0.55)", "(monitor_h*0.75)" },
 })
 
 hl.window_rule({

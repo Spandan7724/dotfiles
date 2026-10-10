@@ -1,0 +1,61 @@
+{
+    "//": "The desktop menu (Super+Escape), drawn by Menu.qml. Ids are dotted paths: 'setup.audio' sits in the 'setup' submenu; an entry without 'action' is a submenu. 'when' hides a row when its shell test fails; 'state' shows On/Off from a shell test. Actions run with the prelude's variables.",
+    "prelude": "scripts=\"$HOME/.config/hypr/scripts\"; config_root=\"${XDG_CONFIG_HOME:-$HOME/.config}\"",
+    "entries": [
+        { "id": "apps", "icon": "󰀻", "label": "Apps", "description": "Search and launch installed applications", "keywords": "applications launcher programs software run drun", "action": "$scripts/apps-menu.sh" },
+        { "id": "overview", "icon": "󰘔", "label": "Overview", "description": "All workspaces and windows at a glance", "keywords": "workspaces windows expo grid desktops", "action": "$scripts/workspace-overview.sh toggle" },
+        { "id": "capture", "icon": "󰄀", "label": "Capture", "description": "Screenshots, recordings, text and colour" },
+        { "id": "style", "icon": "󰏘", "label": "Style", "description": "Theme, wallpaper, bar and transparency" },
+        { "id": "setup", "icon": "󰒓", "label": "Setup", "description": "Network, audio, display, power and system" },
+        { "id": "tools", "icon": "󰦬", "label": "Tools", "description": "Clipboard, calculator, notes, agents and more" },
+        { "id": "keybinds", "icon": "󰌌", "label": "Keyboard shortcuts", "description": "Every shortcut, grouped and searchable", "keywords": "shortcuts hotkeys keys bindings cheatsheet help", "action": "$scripts/keybinds.sh" },
+        { "id": "power", "icon": "󰐥", "label": "Power", "description": "Lock, suspend, log out, restart or shut down", "keywords": "session lock suspend sleep hibernate logout log out restart reboot shutdown shut down poweroff windows firmware", "action": "$scripts/power-menu.sh" },
+
+        { "id": "capture.shot", "icon": "󰹑", "label": "Screenshot", "description": "Region, window, full screen, delayed or annotated", "keywords": "screenshot picture grab snip print screen" },
+        { "id": "capture.record", "icon": "󰑊", "label": "Screen recording", "description": "Start or stop recording a region", "keywords": "record video capture mp4 screencast movie", "action": "$scripts/record-toggle.sh", "when": "command -v wf-recorder", "state": "pgrep -x wf-recorder" },
+        { "id": "capture.ocr", "icon": "󰴑", "label": "Copy text", "description": "Read the text in a region and copy it", "keywords": "ocr scan read copy text from screen tesseract", "action": "$scripts/screenshot.sh ocr", "when": "command -v tesseract" },
+        { "id": "capture.colour", "icon": "󰃉", "label": "Pick colour", "description": "Copy the hex value of any pixel", "keywords": "color picker eyedropper hex hyprpicker swatch", "action": "$scripts/color-picker.sh", "when": "command -v hyprpicker" },
+
+        { "id": "capture.shot.region", "icon": "󰩭", "label": "Region", "description": "Drag to select an area", "keywords": "select area crop snip part", "action": "$scripts/screenshot.sh area" },
+        { "id": "capture.shot.window", "icon": "󰖯", "label": "Window", "description": "The active window", "keywords": "active current application", "action": "$scripts/screenshot.sh window" },
+        { "id": "capture.shot.full", "icon": "󰍹", "label": "Full screen", "description": "Everything on the display", "keywords": "fullscreen whole display everything monitor", "action": "$scripts/screenshot.sh full" },
+        { "id": "capture.shot.delay", "icon": "󰔛", "label": "Delayed", "description": "Full screen after five seconds", "keywords": "after 5 seconds timer wait countdown", "action": "$scripts/screenshot.sh delay" },
+        { "id": "capture.shot.annotate", "icon": "󰏬", "label": "Annotate", "description": "Select a region, then draw on it", "keywords": "draw markup arrow swappy edit", "action": "$scripts/screenshot.sh annotate", "when": "command -v swappy" },
+        { "id": "capture.shot.copy", "icon": "󰅍", "label": "Region to clipboard", "description": "Copy a region without saving a file", "keywords": "copy paste region without saving", "action": "$scripts/screenshot.sh area-copy" },
+
+        { "id": "style.theme", "icon": "󰸌", "label": "Theme", "description": "Colours for the whole desktop", "keywords": "gruvbox everforest tokyo night monochrome solitude vantablack colours colors scheme palette", "action": "$config_root/themes/picker.sh" },
+        { "id": "style.wallpaper", "icon": "󰸉", "label": "Wallpaper", "description": "Choose, cycle or shuffle backgrounds", "keywords": "background image picture photo desktop" },
+        { "id": "style.opacity", "icon": "󰡱", "label": "Window opacity", "description": "How see-through windows are", "keywords": "transparency see through faded window", "action": "$scripts/opacity.sh" },
+        { "id": "style.bar", "icon": "󰍜", "label": "Menu bar", "description": "Show or hide Waybar", "keywords": "menubar waybar panel status hide show toggle", "action": "$scripts/waybar-toggle.sh", "state": "pgrep -x waybar" },
+        { "id": "style.reload", "icon": "󰑐", "label": "Reload desktop", "description": "Re-read Hyprland and Waybar configuration", "keywords": "refresh restart hyprland waybar config apply", "action": "$scripts/reload-desktop.sh" },
+
+        { "id": "style.wallpaper.choose", "icon": "󰸉", "label": "Choose", "description": "Browse wallpapers with previews", "keywords": "pick browse select background image", "action": "quickshell -n -c hyprquickpaper" },
+        { "id": "style.wallpaper.next", "icon": "󰒭", "label": "Next", "description": "The following wallpaper", "keywords": "forward cycle following background", "action": "$scripts/wallpaper-cycle.sh next" },
+        { "id": "style.wallpaper.previous", "icon": "󰒮", "label": "Previous", "description": "The one before", "keywords": "back cycle prior background", "action": "$scripts/wallpaper-cycle.sh previous" },
+        { "id": "style.wallpaper.random", "icon": "󰒟", "label": "Random", "description": "Any wallpaper at random", "keywords": "shuffle surprise any background", "action": "$scripts/wallpaper-cycle.sh random" },
+
+        { "id": "setup.network", "icon": "󰤨", "label": "Wi-Fi", "description": "Networks and connection", "keywords": "wifi network internet ethernet vpn connection wireless", "action": "$scripts/panel.sh wifi" },
+        { "id": "setup.bluetooth", "icon": "󰂯", "label": "Bluetooth", "description": "Pair and connect devices", "keywords": "pair device headphones mouse keyboard", "action": "$scripts/panel.sh bluetooth" },
+        { "id": "setup.audio", "icon": "󰕾", "label": "Audio", "description": "Outputs, inputs and per-app volume", "keywords": "sound volume microphone output input pavucontrol", "action": "pavucontrol", "when": "command -v pavucontrol" },
+        { "id": "setup.display", "icon": "󰍹", "label": "Display", "description": "Brightness, scale and text size", "keywords": "brightness backlight dim scale zoom dpi hidpi font text size bigger smaller", "action": "$scripts/panel.sh display" },
+        { "id": "setup.monitors", "icon": "󰍺", "label": "Monitor layout", "description": "Resolution and arrangement of displays", "keywords": "monitors resolution arrangement nwg displays external", "action": "nwg-displays", "when": "command -v nwg-displays" },
+        { "id": "setup.night", "icon": "󰖔", "label": "Night light", "description": "Warmer colours for the evening", "keywords": "nightlight blue gamma warm temperature gammastep", "action": "$config_root/waybar/scripts/toggle-gammastep", "when": "test -x $config_root/waybar/scripts/toggle-gammastep", "state": "pgrep -x gammastep" },
+        { "id": "setup.idle", "icon": "󰡆", "label": "Screen & lock", "description": "When the screen locks, turns off and sleeps", "keywords": "idle timeout screensaver sleep blank dim dpms lock screen awake suspend inactivity", "action": "$scripts/idle-settings.sh" },
+        { "id": "setup.power", "icon": "󰂏", "label": "Power profile", "description": "Performance, balanced or power saver", "keywords": "battery performance balanced saver watts gpu", "action": "$scripts/power-profile.sh menu", "when": "command -v powerprofilesctl" },
+        { "id": "setup.defaults", "icon": "󰉋", "label": "Default apps", "description": "Terminal, browser, editor, notes, agent and more", "keywords": "default applications terminal shell browser editor file manager pdf image video notes agent", "action": "$scripts/defaults-menu.sh" },
+        { "id": "setup.packages", "icon": "󰏖", "label": "Packages", "description": "Install, remove and update software", "keywords": "install remove update pacman yay aur orphans software", "action": "$scripts/package-manager.sh" },
+        { "id": "setup.vm", "icon": "󰢹", "label": "Virtual machines", "description": "Create and run VMs", "keywords": "vm qemu kvm libvirt virt-manager iso distro", "action": "$scripts/vm-manager.sh", "when": "command -v virsh" },
+        { "id": "setup.fingerprint", "icon": "󰈷", "label": "Fingerprint", "description": "Enroll fingers for unlocking", "keywords": "biometric enroll unlock security fprintd", "action": "kitty --class dotfiles-security --title 'Fingerprint setup' -e $scripts/fingerprint-setup.sh", "when": "command -v fprintd-enroll" },
+        { "id": "setup.hyprland", "icon": "󰖲", "label": "Hyprland settings", "description": "Advanced compositor options in HyprMod", "keywords": "hyprmod compositor configuration advanced tweak", "action": "$scripts/hyprmod-launch.sh", "when": "command -v hyprmod" },
+
+        { "id": "tools.clipboard", "icon": "󰅌", "label": "Clipboard", "description": "Search history and paste", "keywords": "history copy paste text image cliphist", "action": "$scripts/clipboard.sh", "when": "command -v cliphist" },
+        { "id": "tools.calculator", "icon": "󰪚", "label": "Calculator", "description": "Evaluate and copy a result", "keywords": "math qalc compute sum convert units", "action": "$scripts/calculator.sh" },
+        { "id": "tools.emoji", "icon": "󰞅", "label": "Emoji", "description": "Find and copy an emoji or symbol", "keywords": "symbols glyph character unicode rofimoji", "action": "$scripts/emoji.sh", "when": "command -v rofimoji" },
+        { "id": "tools.agent", "icon": "󱐋", "label": "Coding agent", "description": "Start your agent in a chosen folder", "keywords": "ai claude code codex opencode amp assistant llm terminal project", "action": "$scripts/agent-launcher.sh" },
+        { "id": "tools.notes", "icon": "󰠮", "label": "Notes", "description": "Open a new note or your notes app", "keywords": "note notebook journal obsidian markdown write jot", "action": "$scripts/default-launcher.sh notes" },
+        { "id": "tools.files", "icon": "󰈙", "label": "Find files", "description": "Search your home folder by name", "keywords": "search find documents folders open", "action": "$scripts/file-search.sh" },
+        { "id": "tools.web", "icon": "󰖟", "label": "Web search", "description": "Search in your browser", "keywords": "search google query browser internet", "action": "$scripts/web-search.sh" },
+        { "id": "tools.transcode", "icon": "󰕧", "label": "Transcode", "description": "Convert or shrink images and videos", "keywords": "convert video image mp4 gif compress shrink", "action": "$scripts/transcode.sh" },
+        { "id": "tools.monitor", "icon": "󰍛", "label": "System monitor", "description": "CPU, memory and processes in btop", "keywords": "system btop cpu memory process top usage", "action": "kitty --class dotfiles-btop -e btop", "when": "command -v btop" }
+    ]
+}

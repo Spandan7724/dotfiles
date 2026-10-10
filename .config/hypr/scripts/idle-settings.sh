@@ -12,7 +12,6 @@
 set -uo pipefail
 
 config_root="${XDG_CONFIG_HOME:-$HOME/.config}"
-menu_theme="$config_root/rofi/menu.rasi"
 state_dir="$config_root/dotfiles/idle"
 conf="$config_root/hypr/hypridle.conf"
 awake_pid="${XDG_RUNTIME_DIR:-/tmp}/dotfiles-keep-awake.pid"
@@ -113,7 +112,7 @@ pick_value() { # pick_value <name> <title> <current> <option seconds...>
             [[ "$option" == "$current" ]] && marker=' ●'
             printf '%s %s\t%s\n' "$marker" "$(pretty "$option")" "$option"
         done
-    } | rofi -dmenu -i -no-custom -p "$title" -display-columns 1 -theme "$menu_theme")" || return 0
+    } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p "$title" -display-columns 1)" || return 0
 
     option="${selection#*$'\t'}"
     [[ -n "$option" && "$option" != "$selection" ]] || return 0
@@ -137,8 +136,7 @@ while true; do
         printf '󰔛  %-18s %s\tlock\n' 'Lock after' "$(pretty "$lock")"
         printf '󰡆  %-18s %s\tdpms\n' 'Screen off after' "$(pretty "$dpms")"
         printf '󰤄  %-18s %s\tsuspend\n' 'Suspend after' "$(pretty "$suspend")"
-    } | rofi -dmenu -i -no-custom -p 'Screen and lock' -display-columns 1 \
-        -theme "$menu_theme" -theme-str 'window { width: 400px; }')" || exit 0
+    } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Screen and lock' -display-columns 1)" || exit 0
 
     choice="${selection#*$'\t'}"
     [[ -n "$choice" && "$choice" != "$selection" ]] || exit 0

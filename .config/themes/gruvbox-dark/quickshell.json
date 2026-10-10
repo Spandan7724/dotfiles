@@ -1,0 +1,12 @@
+{
+    "mode": "dark",
+    "background": "#282828",
+    "surface": "#e63c3836",
+    "surfaceVariant": "#504945",
+    "foreground": "#d4be98",
+    "muted": "#928374",
+    "primary": "#7daea3",
+    "onPrimary": "#000000",
+    "outline": "#928374",
+    "error": "#ea6962"
+}

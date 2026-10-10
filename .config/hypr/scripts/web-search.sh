@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-query="$(printf '' | rofi -dmenu -p 'Search the web' -theme "$HOME/.config/rofi/input.rasi")"
+query="$(printf '' | "$HOME/.config/hypr/scripts/menu-select" -p 'Web search' -placeholder 'Search in your browser…')"
 [[ -n "$query" ]] || exit 0
 
 encoded="$(python - "$query" <<'PY'

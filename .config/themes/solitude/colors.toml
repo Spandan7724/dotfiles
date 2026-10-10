@@ -1,0 +1,59 @@
+# Palette from Omarchy's solitude theme, used by themes/generate.py.
+mode = "dark"
+
+accent = "#798186"
+selection = "#343d41"
+muted = "#4b4e55"
+
+background = "#101315"
+dark_background = "#0c0e10"
+darker_background = "#080a0b"
+lighter_background = "#101315"
+
+foreground = "#cacccc"
+dark_foreground = "#4b4e55"
+light_foreground = "#cbc2be"
+bright_foreground = "#a5aeb4"
+
+hyprland_active_border = "rgba(798186ee) rgba(caccccee)"
+hyprland_inactive_border = "rgb(1e1e1e)"
+active_border_color = "#a8adb0"
+active_tab_background = "#798186"
+
+red = "#565d60"
+yellow = "#d9dbdc"
+green = "#9fa5a9"
+cyan = "#707070"
+blue = "#798186"
+magenta = "#aeaeae"
+
+bright_red = "#de6145"
+bright_yellow = "#c9c2b4"
+bright_green = "#343d41"
+bright_cyan = "#707070"
+bright_blue = "#5d6367"
+bright_magenta = "#9a9a9a"
+
+orange = "#de6145"
+
+[apps]
+helix = "ashen"
+btop = "keep"
+
+# Editor syntax (Doom, NvChad; Helix uses its built-in ashen). The palette
+# above is greyscale, so code takes its colours from ashen, the theme Omarchy
+# pairs with Solitude for Neovim.
+[syntax]
+keyword = "#b14242"
+function = "#d5d5d5"
+string = "#df6464"
+type = "#4a8b8b"
+constant = "#c4693d"
+number = "#4a8b8b"
+builtin = "#4a8b8b"
+operator = "#d87c4a"
+punctuation = "#949494"
+comment = "#737373"
+variable = "#b4b4b4"
+bold_functions = true
+italic_comments = true

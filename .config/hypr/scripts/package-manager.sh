@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-menu_theme="$HOME/.config/rofi/menu.rasi"
 
 install_packages() {
     mapfile -t packages < <(pacman -Slq | sort -u | fzf --multi --prompt='Install packages > ' \
@@ -25,7 +24,7 @@ case "${1:-}" in
             printf '󰆴  Remove packages\t--remove\n'
             printf '󰚰  Update the system\t--update\n'
             printf '󰃢  Remove orphaned packages\t--orphans\n'
-        } | rofi -dmenu -i -no-custom -p 'Packages' -display-columns 1 -theme "$menu_theme")" || exit 0
+        } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Packages' -display-columns 1)" || exit 0
         action="${selection#*$'\t'}"
         [[ -n "$action" && "$action" != "$selection" ]] || exit 0
         exec kitty --class dotfiles-packages --title 'Package manager' -e "$0" "$action" ;;

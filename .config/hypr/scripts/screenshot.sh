@@ -42,4 +42,17 @@ elif [[ "$mode" == ocr ]] && command -v tesseract >/dev/null; then
     exit 0
 fi
 
-notify-send -a Screenshot -i "$output" "Screenshot saved" "$output"
+# Clicking the notification (its default action) reveals the file in the file
+# manager. notify-send waits for the click, so it runs detached.
+reveal_on_click() {
+    local action
+    action="$(notify-send -a Screenshot -i "$output" -A default=Open "Screenshot saved" "$output")" || return
+    [[ "$action" == default ]] || return
+    local uri="file://$(realpath -- "$output")"
+    gdbus call --session --dest org.freedesktop.FileManager1 \
+        --object-path /org/freedesktop/FileManager1 \
+        --method org.freedesktop.FileManager1.ShowItems "['$uri']" "" >/dev/null 2>&1 ||
+        "$HOME/.config/hypr/scripts/default-launcher.sh" file-manager "$directory"
+}
+reveal_on_click </dev/null >/dev/null 2>&1 &
+disown

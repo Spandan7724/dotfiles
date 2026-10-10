@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-expression="$(printf '' | rofi -dmenu -p 'Calculate' -theme "$HOME/.config/rofi/input.rasi")"
+expression="$(printf '' | "$HOME/.config/hypr/scripts/menu-select" -p 'Calculator' -placeholder 'An expression, e.g. 12% of 340 or 5 km to miles')"
 [[ -n "$expression" ]] || exit 0
 
 if ! command -v qalc >/dev/null; then

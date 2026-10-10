@@ -16,8 +16,10 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("waybar")
     hl.exec_cmd("dunst")
     hl.exec_cmd("~/.config/hypr/scripts/notification-dismiss-watch.sh")
-    hl.exec_cmd("nm-applet")
-    hl.exec_cmd("blueman-applet")
+    -- Wi-Fi and Bluetooth are handled by the Quickshell panels (quickshell/panels).
+    -- blueman-applet stays only as the Bluetooth pairing agent (PIN and passkey
+    -- prompts), with its tray icon plugins turned off.
+    hl.exec_cmd("sh -c \"gsettings set org.blueman.general plugin-list \\\"['!StatusIcon', '!StatusNotifierItem', '!ShowConnected']\\\"; exec blueman-applet\"")
     hl.exec_cmd("sh -c 'command -v hypridle >/dev/null && { pgrep -x hypridle >/dev/null || exec hypridle; }'")
     hl.exec_cmd("sh -c 'sleep 1; ~/.config/hypr/scripts/workspace-overview.sh --load'")
     hl.exec_cmd("wl-paste --type text --watch cliphist store")
@@ -26,6 +28,7 @@ hl.on("hyprland.start", function()
 
     hl.exec_cmd("awww-daemon")
     hl.exec_cmd("qs -d -c volume-osd")
+    hl.exec_cmd("qs -d -c panels")
     hl.exec_cmd("sh -c 'sleep 1; ~/.config/themes/restore.sh'")
     hl.exec_cmd("sh -c 'sleep 2; ~/.config/hypr/scripts/detect-display.sh'")
     hl.exec_cmd("sh -c 'sleep 3; ~/.config/hypr/scripts/power-watch.sh'")
@@ -160,6 +163,9 @@ hl.gesture({
 require("keybinds")
 require("monitors")
 require("rules")
+
+-- Border colors from the selected desktop theme (~/.config/themes).
+pcall(dofile, os.getenv("HOME") .. "/.config/themes/current/hyprland.lua")
 
 -- HyprMod owns this machine-local file. Load it last so changes made in the
 -- GUI are explicit overrides without rewriting the Git-managed modules.

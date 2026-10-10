@@ -97,6 +97,26 @@ window#waybar {
     color: @foreground;
 }
 
+#custom-media.paused {
+    color: alpha(@muted, 0.8);
+}
+
+#custom-media-previous,
+#custom-media-toggle,
+#custom-media-next {
+    min-width: 14px;
+    padding: 0 6px;
+    color: @muted;
+    font-size: 14px;
+}
+
+#custom-media-previous:hover,
+#custom-media-toggle:hover,
+#custom-media-next:hover {
+    color: @hover;
+    background: alpha(@foreground, 0.12);
+}
+
 #workspaces {
     margin: 3px 2px;
     padding: 0 3px;
@@ -104,7 +124,8 @@ window#waybar {
     background: alpha(@foreground, 0.045);
 }
 
-#workspaces button {
+/* Workspace buttons are custom modules (see group/workspaces in config.jsonc). */
+#workspaces .ws {
     min-width: 15px;
     min-height: 22px;
     margin: 1px;
@@ -116,26 +137,17 @@ window#waybar {
     transition: min-width 160ms ease, color 140ms ease, background-color 140ms ease;
 }
 
-#workspaces button.empty {
+#workspaces .ws.empty {
     color: alpha(@muted, 0.42);
 }
 
-#workspaces button.visible {
-    color: @foreground;
-}
-
-#workspaces button.active {
+#workspaces .ws.active {
     min-width: 26px;
     color: @bar_bg;
     background: @foreground;
 }
 
-#workspaces button.urgent {
-    color: @bar_bg;
-    background: @critical;
-}
-
-#workspaces button.special {
+#workspaces .ws.special {
     color: @foreground;
     border-bottom: 1px solid @foreground;
 }
@@ -146,6 +158,8 @@ window#waybar {
 }
 
 #network,
+#custom-emacs,
+#custom-display,
 #custom-tray,
 #custom-system,
 #custom-notifications,
@@ -223,7 +237,7 @@ window#waybar {
 #battery:hover,
 #clock:hover,
 #custom-media:hover,
-#workspaces button:hover {
+#workspaces .ws:hover {
     color: @hover;
     background: alpha(@foreground, 0.12);
 }

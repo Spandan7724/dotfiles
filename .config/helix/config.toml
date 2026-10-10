@@ -1,8 +1,10 @@
 
-theme = "gruvbox_dark_hard"
+# Follows the desktop theme: themes/apply.sh links themes/dotfiles.toml to
+# ~/.config/themes/current/helix.toml.
+theme = "dotfiles"
 
 [editor]
-line-number = "relative"
+line-number = "absolute"
 mouse = true
 cursorline = true
 bufferline = "multiple"

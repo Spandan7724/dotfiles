@@ -1,0 +1,124 @@
+/* Thunar follows the desktop theme. Matugen rewrites thunar-colors.css from
+ * the wallpaper; named themes (Super+Shift+T) override it with their own
+ * thunar.css. Every rule is scoped to Thunar's window so other GTK 3
+ * applications keep plain Adwaita. */
+@import url("thunar-colors.css");
+@import url("../themes/current/thunar.css");
+
+window.thunar,
+window.thunar .standard-view,
+window.thunar .standard-view .view,
+window.thunar .standard-view iconview,
+window.thunar .standard-view treeview {
+    background-color: @thunar_bg;
+    color: @thunar_fg;
+}
+
+window.thunar .shortcuts-pane,
+window.thunar .shortcuts-pane .view,
+window.thunar .shortcuts-pane treeview,
+window.thunar .sidebar,
+window.thunar .sidebar .view {
+    background-color: @thunar_sidebar_bg;
+    color: @thunar_fg;
+}
+
+window.thunar headerbar,
+window.thunar toolbar,
+window.thunar menubar,
+window.thunar statusbar,
+window.thunar notebook > header {
+    background-color: @thunar_header_bg;
+    background-image: none;
+    color: @thunar_fg;
+    border-color: @thunar_border;
+    box-shadow: none;
+}
+
+window.thunar notebook > header tab:checked {
+    background-color: @thunar_bg;
+    box-shadow: inset 0 -2px @thunar_accent;
+}
+
+window.thunar notebook > header tab label,
+window.thunar statusbar label {
+    color: @thunar_muted;
+}
+
+window.thunar notebook > header tab:checked label {
+    color: @thunar_fg;
+}
+
+window.thunar treeview.view header button {
+    background-color: @thunar_header_bg;
+    background-image: none;
+    color: @thunar_muted;
+    border-color: @thunar_border;
+}
+
+window.thunar .view:selected,
+window.thunar .view:selected:focus,
+window.thunar iconview:selected,
+window.thunar treeview:selected,
+window.thunar .view text:selected,
+window.thunar .view rubberband,
+window.thunar iconview rubberband {
+    background-color: @thunar_selection;
+    color: @thunar_on_selection;
+}
+
+window.thunar .view rubberband,
+window.thunar iconview rubberband {
+    border: 1px solid @thunar_accent;
+}
+
+window.thunar toolbar button,
+window.thunar .path-bar button {
+    background-color: transparent;
+    background-image: none;
+    color: @thunar_fg;
+    border-color: transparent;
+    box-shadow: none;
+    text-shadow: none;
+}
+
+window.thunar toolbar button:hover,
+window.thunar .path-bar button:hover {
+    background-color: @thunar_raised_bg;
+}
+
+window.thunar .path-bar button:checked {
+    background-color: @thunar_accent;
+    color: @thunar_on_accent;
+}
+
+window.thunar entry {
+    background-color: @thunar_raised_bg;
+    background-image: none;
+    color: @thunar_fg;
+    border-color: @thunar_border;
+    box-shadow: none;
+}
+
+window.thunar entry:focus {
+    border-color: @thunar_accent;
+    box-shadow: inset 0 0 0 1px @thunar_accent;
+}
+
+window.thunar paned > separator {
+    background-color: @thunar_border;
+    background-image: none;
+}
+
+window.thunar scrollbar {
+    background-color: transparent;
+    border-color: transparent;
+}
+
+window.thunar scrollbar slider {
+    background-color: alpha(@thunar_fg, 0.35);
+}
+
+window.thunar scrollbar slider:hover {
+    background-color: alpha(@thunar_fg, 0.55);
+}

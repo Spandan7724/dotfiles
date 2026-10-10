@@ -2,7 +2,6 @@
 
 set -euo pipefail
 state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/defaults"
-menu_theme="$HOME/.config/rofi/menu.rasi"
 mkdir -p "$state_dir"
 
 if [[ "${1:-}" == --set-shell ]]; then
@@ -26,7 +25,34 @@ choose_installed() {
         program="$1"; label="$2"; shift 2
         command -v "$program" >/dev/null 2>&1 && choices+="$program\t$label"$'\n'
     done
-    printf '%b' "$choices" | sed '/^$/d' | rofi -dmenu -i -no-custom -p "$prompt" -display-columns 2 -theme "$menu_theme"
+    printf '%b' "$choices" | sed '/^$/d' | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p "$prompt" -display-columns 2
+}
+
+# Installed notes apps, as "desktop-id<TAB>Name" lines. Any launcher whose
+# name, description, keywords, or categories talk about notes, notebooks,
+# journals, or a knowledge base counts, so apps such as Obsidian, Logseq, or
+# Joplin appear here once installed (including Flatpaks) with no list to edit.
+notes_apps() {
+    local dirs=("${XDG_DATA_HOME:-$HOME/.local/share}/applications") data dir file
+    IFS=: read -ra data <<<"${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+    for dir in "${data[@]}"; do dirs+=("$dir/applications"); done
+    for dir in "${dirs[@]}"; do
+        for file in "$dir"/*.desktop; do
+            [[ -f "$file" ]] || continue
+            awk -v id="$(basename "$file" .desktop)" '
+                /^\[/ { main = ($0 == "[Desktop Entry]"); next }
+                !main { next }
+                /^Name=/ && name == "" { name = substr($0, 6) }
+                /^(NoDisplay|Hidden)=true/ { hidden = 1 }
+                /^Type=/ && $0 != "Type=Application" { hidden = 1 }
+                /^(Name|GenericName|Keywords|Comment|Categories)=/ { text = text " " tolower($0) }
+                END {
+                    if (hidden || name == "") exit
+                    if (text ~ /(^|[^a-z])(notes?|notebook|note-taking|notetaking|zettelkasten|journal|knowledge base|second brain)([^a-z]|$)/)
+                        print id "\t" name
+                }' "$file"
+        done
+    done | awk -F '\t' '!seen[$1]++' | sort -t $'\t' -k2,2
 }
 
 set_mimes() {
@@ -35,18 +61,20 @@ set_mimes() {
     for mime in "$@"; do xdg-mime default "$desktop" "$mime"; done
 }
 
-# The rofi menu theme sizes itself to the row count, so no height arithmetic
-# is needed here. The hidden second column carries the id that is matched on.
+# The menu sizes itself to the row count. The hidden second column carries
+# the id that is matched on.
 category="$({
     printf '\U000f018d  Terminal\tterminal\n'
     printf '\U000f07b7  Login shell\tshell\n'
     printf '\U000f059f  Web browser\tbrowser\n'
     printf '\U000f0a1e  Code and text editor\teditor\n'
     printf '\U000f024b  File manager\tfile-manager\n'
+    printf '\U000f082e  Notes app\tnotes\n'
+    printf '\U000f140b  Coding agent\tagent\n'
     printf '\U000f0226  PDF viewer\tpdf\n'
     printf '\U000f02e9  Image viewer\timage\n'
     printf '\U000f0439  Video player\tvideo\n'
-} | rofi -dmenu -i -no-custom -p 'Defaults' -display-columns 1 -theme "$menu_theme")" || exit 0
+} | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Defaults' -display-columns 1)" || exit 0
 category="${category#*$'\t'}"
 
 case "$category" in
@@ -79,6 +107,19 @@ case "$category" in
         printf '%s\n' "$program" >"$state_dir/file-manager"
         case "$program" in thunar) desktop=thunar.desktop ;; dolphin) desktop=org.kde.dolphin.desktop ;; nautilus) desktop=org.gnome.Nautilus.desktop ;; nemo) desktop=nemo.desktop ;; esac
         set_mimes "$desktop" inode/directory ;;
+    notes)
+        # The hidden column is the stored value: doom, nvim, or app:<desktop-id>.
+        selection="$({
+            command -v emacsclient >/dev/null 2>&1 && printf 'doom\tDoom Emacs (new note in ~/notes)\n'
+            command -v nvim >/dev/null 2>&1 && printf 'nvim\tNeovim (new note in ~/notes)\n'
+            notes_apps | sed 's/^/app:/'
+        } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Notes app' -display-columns 2)" || exit 0
+        program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0
+        printf '%s\n' "$program" >"$state_dir/notes" ;;
+    agent)
+        selection="$(choose_installed 'Coding agent' claude 'Claude Code' codex Codex opencode OpenCode amp Amp)"
+        program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0
+        printf '%s\n' "$program" >"$state_dir/agent" ;;
     pdf)
         selection="$(choose_installed 'Default PDF viewer' zathura Zathura evince 'Document Viewer' okular Okular)"
         program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0

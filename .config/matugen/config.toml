@@ -44,3 +44,8 @@ type = "SchemeTonalSpot"
 input_path = "~/.config/matugen/templates/wlogout.css"
 output_path = "~/.config/wlogout/colors.css"
 type = "SchemeTonalSpot"
+
+[templates.thunar]
+input_path = "~/.config/matugen/templates/thunar-colors.css"
+output_path = "~/.config/gtk-3.0/thunar-colors.css"
+type = "SchemeTonalSpot"

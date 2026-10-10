@@ -1,0 +1,24 @@
+# Palette for the generated app themes (themes/generate.py); see gruvbox-dark.
+mode = "dark"
+
+background = "#000000"
+dark_background = "#0a0a0a"
+lighter_background = "#1b1b1b"
+selection = "#303030"
+
+foreground = "#f5f5f5"
+light_foreground = "#d0d0d0"
+bright_foreground = "#ffffff"
+muted = "#a2a2a2"
+accent = "#ffffff"
+
+red = "#d75f5f"
+orange = "#d7875f"
+yellow = "#d7af5f"
+green = "#87af87"
+cyan = "#87d7d7"
+blue = "#87afd7"
+magenta = "#af87d7"
+
+[apps]
+btop = "greyscale"

@@ -509,6 +509,7 @@ install_dotfiles() {
     for script_dir in \
         "$CONFIG_DIR/hypr/scripts" \
         "$CONFIG_DIR/quickshell/hyprquickpaper" \
+        "$CONFIG_DIR/quickshell/vm-manager" \
         "$CONFIG_DIR/waybar/scripts" \
         "$CONFIG_DIR/themes"; do
         if [[ -d "$script_dir" ]]; then

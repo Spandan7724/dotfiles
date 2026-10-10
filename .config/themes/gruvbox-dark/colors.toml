@@ -1,0 +1,29 @@
+# Palette for the generated app themes (themes/generate.py). Keys follow
+# Omarchy's colors.toml. The [apps] table picks an app's built-in theme where
+# one matches; apps without an entry get a theme generated from this palette.
+mode = "dark"
+
+background = "#282828"
+dark_background = "#1d2021"
+lighter_background = "#3c3836"
+selection = "#504945"
+
+foreground = "#d4be98"
+light_foreground = "#ddc7a1"
+bright_foreground = "#f2e5bc"
+muted = "#928374"
+accent = "#7daea3"
+
+red = "#ea6962"
+orange = "#e78a4e"
+yellow = "#d8a657"
+green = "#a9b665"
+cyan = "#89b482"
+blue = "#7daea3"
+magenta = "#d3869b"
+
+[apps]
+nvchad = "gruvbox"
+doom = "doom-gruvbox"
+helix = "gruvbox_dark_hard"
+btop = "gruvbox_material_dark"

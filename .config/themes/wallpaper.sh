@@ -26,6 +26,15 @@ state_file="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-wallpaper"
 mkdir -p "$(dirname "$state_file")"
 printf '%s\n' "$(realpath -- "$wallpaper")" >"$state_file"
 
+# Named themes ship their own Quickshell palette. Matugen rewrites theme.json
+# below, so put the theme's copy back whenever this script finishes.
+restore_theme_palette() {
+    if [[ -f "$themes_root/current/quickshell.json" ]]; then
+        cp -f -- "$themes_root/current/quickshell.json" "$config_root/quickshell/theme.json"
+    fi
+}
+trap restore_theme_palette EXIT
+
 if command -v awww >/dev/null 2>&1; then
     if awww query >/dev/null 2>&1; then
         awww img "$wallpaper" -t random --transition-duration 1 || \

@@ -1,7 +1,10 @@
 #!/bin/bash
+# Toggle the night light, then refresh the bar's night-light icon (signal 12).
 
 if pgrep -x gammastep >/dev/null; then
     pkill -x gammastep
 else
     nohup gammastep -O 3000 >/dev/null 2>&1 &
 fi
+sleep 0.2
+pkill -RTMIN+12 -x waybar 2>/dev/null || true

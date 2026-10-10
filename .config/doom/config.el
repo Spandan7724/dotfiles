@@ -33,6 +33,9 @@
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
 (setq doom-theme 'doom-one)
+;; The theme follows the desktop theme (~/.config/themes, Super+Shift+T): its
+;; doom.el sets `doom-theme', and the switcher reloads it in a running Emacs.
+(load (expand-file-name "~/.config/themes/current/doom.el") t t)
 ;; Specify both a dark and light theme, like so and Doom will choose which one
 ;; to load based on your system light/dark setting:
 ;;
@@ -80,3 +83,13 @@
 ;;
 ;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
 ;; they are implemented.
+
+;; Tell Waybar's tray entry (waybar/scripts/emacs-tray.sh) when this Emacs
+;; starts or stops, so the bar never has to poll for it. Signal 9 is that
+;; module's refresh signal. On exit the signal goes out a second later, once
+;; the server socket is gone.
+(defun dotfiles/notify-waybar (&optional delay)
+  (call-process "sh" nil 0 nil "-c"
+                (format "sleep %s; pkill -RTMIN+9 -x waybar" (or delay 0))))
+(add-hook 'emacs-startup-hook (lambda () (dotfiles/notify-waybar 1)))
+(add-hook 'kill-emacs-hook (lambda () (dotfiles/notify-waybar 1)))

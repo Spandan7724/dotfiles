@@ -5,14 +5,11 @@
 set -euo pipefail
 
 # cliphist emits "<id>\t<preview>" with the preview capped near 100 characters.
-# The window has to be wide enough to show all of it: rofi matches the whole
-# row but elides what will not fit, so a narrower menu ranks entries by words
-# it never draws — you would land on a row with no visible match and paste
-# something else entirely. Only the preview is displayed; the id rides along in
-# the hidden first column and is what cliphist decodes.
+# The menu is wide enough to show all of it, so a search never lands on a row
+# whose matching words are cut off. Only the preview is displayed; the id rides
+# along in the hidden first column and is what cliphist decodes.
 selection="$(cliphist list |
-    rofi -dmenu -i -p 'Clipboard' -display-columns 2 \
-        -theme-str 'window { width: 980px; } listview { lines: 12; }')" || exit 0
+    "$HOME/.config/hypr/scripts/menu-select" -p 'Clipboard' -placeholder 'Search clipboard history…' -display-columns 2 -width 980 -lines 12)" || exit 0
 
 id="${selection%%$'\t'*}"
 [[ -n "$id" && "$id" != "$selection" ]] || exit 0

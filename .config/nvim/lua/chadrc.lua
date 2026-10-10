@@ -5,8 +5,16 @@
 ---@type ChadrcConfig
 local M = {}
 
+-- The theme follows the desktop theme (~/.config/themes, Super+Shift+T). Its
+-- nvim.lua names a base46 theme; "dotfiles" is the palette-generated one in
+-- lua/themes/dotfiles.lua.
+local function desktop_theme()
+	local ok, name = pcall(dofile, vim.fn.expand "~/.config/themes/current/nvim.lua")
+	return ok and type(name) == "string" and name or "onedark"
+end
+
 M.base46 = {
-	theme = "onedark",
+	theme = desktop_theme(),
 
 	-- hl_override = {
 	-- 	Comment = { italic = true },

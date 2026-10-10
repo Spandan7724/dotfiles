@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-menu_theme="$HOME/.config/rofi/menu.rasi"
 
 selection="$({
     printf '󰃞  100%%  opaque\t1.0\n'
@@ -10,7 +9,7 @@ selection="$({
     printf '󰃝  60%%\t0.6\n'
     printf '󰃚  50%%\t0.5\n'
     printf '󰃚  40%%  ghost\t0.4\n'
-} | rofi -dmenu -i -no-custom -p 'Window opacity' -display-columns 1 -theme "$menu_theme")" || exit 0
+} | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Window opacity' -display-columns 1)" || exit 0
 
 opacity="${selection#*$'\t'}"
 [[ -n "$opacity" && "$opacity" != "$selection" ]] || exit 0

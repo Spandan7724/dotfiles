@@ -7,7 +7,6 @@
 
 set -euo pipefail
 
-menu_theme="$HOME/.config/rofi/menu.rasi"
 
 media_type() {
     case "$(file -b --mime-type "$1")" in
@@ -65,7 +64,7 @@ fi
 
 pick() { # pick <prompt> <option...>
     local prompt="$1"; shift
-    printf '%s\n' "$@" | rofi -dmenu -i -no-custom -p "$prompt" -theme "$menu_theme"
+    printf '%s\n' "$@" | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p "$prompt"
 }
 
 input="${1:-}"
@@ -105,8 +104,7 @@ if [[ -z "$input" ]]; then
     selection="$(printf '%s\n' "${candidates[@]}" |
         sed "s|^$HOME/|~/|" |
         paste -d'\t' - <(printf '%s\n' "${candidates[@]}") |
-        rofi -dmenu -i -p 'Transcode' -display-columns 1 -theme "$menu_theme" \
-            -theme-str 'window { width: 640px; } listview { lines: 12; }')" || exit 0
+        "$HOME/.config/hypr/scripts/menu-select" -p 'Transcode' -display-columns 1)" || exit 0
     input="${selection#*$'\t'}"
     [[ -n "$input" && "$input" != "$selection" ]] || exit 0
 fi

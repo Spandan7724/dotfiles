@@ -1,6 +1,7 @@
 [Unit]
 Description=Keep platform and NVIDIA limits aligned with the selected power profile
 After=graphical-session.target
+PartOf=graphical-session.target
 
 [Service]
 Type=simple
