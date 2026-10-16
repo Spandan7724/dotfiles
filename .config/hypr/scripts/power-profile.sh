@@ -7,22 +7,22 @@ profile="${1:-menu}"
 if [[ "$profile" == menu ]]; then
     current="$(powerprofilesctl get 2>/dev/null || printf balanced)"
 
-    # "<marker> <icon>  <name padded> <detail>" reads as aligned columns because
-    # the menu font is monospaced. The id travels in a hidden column so the
-    # choice is matched exactly rather than by pattern.
+    # Columns: name, detail, icon, id. The current profile is marked with a
+    # leading "●", and the id is matched exactly from the last column.
     row() {
-        local id="$1" icon="$2" name="$3" detail="$4" marker='  '
-        [[ "$id" == "$current" ]] && marker=' ●'
-        printf '%s %s  %-12s %s\t%s\n' "$marker" "$icon" "$name" "$detail" "$id"
+        local id="$1" icon="$2" name="$3" detail="$4" marker=''
+        [[ "$id" == "$current" ]] && marker='● '
+        printf '%s%s\t%s\t%b\t%s\n' "$marker" "$name" "$detail" "$icon" "$id"
     }
 
     selection="$({
-        row power-saver '󰌪' 'Power saver' 'quiet, GPU held at 55 W'
-        row balanced    '󰾅' 'Balanced'    'dynamic GPU budget near 80 W'
-        row performance '󰓅' 'Performance' 'Dynamic Boost up to 130 W'
-    } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Power profile' -display-columns 1)" || exit 0
+        row power-saver '\U000f032a' 'Power saver' 'Quiet, GPU held at 55 W'
+        row balanced    '\U000f0f85' 'Balanced'    'Dynamic GPU budget near 80 W'
+        row performance '\U000f04c5' 'Performance' 'Dynamic Boost up to 130 W'
+    } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Power profile' \
+        -display-columns 1 -detail-column 2 -icon-column 3)" || exit 0
 
-    profile="${selection#*$'\t'}"
+    profile="${selection##*$'\t'}"
     [[ -n "$profile" && "$profile" != "$selection" ]] || exit 0
 fi
 

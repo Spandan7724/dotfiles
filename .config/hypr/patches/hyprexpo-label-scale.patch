@@ -1,0 +1,18 @@
+diff --git a/OverviewRender.cpp b/OverviewRender.cpp
+index e73c8f6..dc3a98e 100644
+--- a/OverviewRender.cpp
++++ b/OverviewRender.cpp
+@@ -411,7 +411,12 @@ void COverview::fullRender() {
+         const int baseF = std::max(8, fontSize);
+         if (!tex || tex->m_texID == 0) {
+             const int fsz = std::max(8, (int)std::round(baseF * scaleMul));
+-            Vector2D  buf{std::max(32, fsz * std::max(2, (int)label.size())), std::max(24, fsz + 8)};
++            // The text is drawn at fsz points times the monitor scale, so the
++            // buffer is sized in physical pixels for that, not in logical ones;
++            // otherwise labels are cropped on HiDPI monitors.
++            const double px = fsz * MON->m_scale * 96.0 / 72.0;
++            Vector2D  buf{std::ceil(std::max(32.0 * MON->m_scale, px * (0.7 * std::max<size_t>(1, label.size()) + 0.4))),
++                          std::ceil(std::max(24.0 * MON->m_scale, px * 1.4))};
+             sz  = buf;
+             tex = renderNumberTexture(label, col, buf, MON->m_scale, fsz);
+         }

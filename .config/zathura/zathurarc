@@ -1,0 +1,2 @@
+# Colours follow the desktop theme (themes/current/zathura.rc).
+include ../themes/current/zathura.rc

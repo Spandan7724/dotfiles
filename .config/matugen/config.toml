@@ -6,6 +6,17 @@ caching = true
 contrast = 0.0
 source_color_index = 0
 
+# Terminal-style hues, blended toward the wallpaper so they belong with it.
+# They feed templates/palette.toml (the wallpaper themes' fish, fzf, cava...).
+[config.custom_colors]
+red = { color = "#e5534b", blend = true }
+orange = { color = "#e8875a", blend = true }
+yellow = { color = "#d7a95f", blend = true }
+green = { color = "#6aab73", blend = true }
+cyan = { color = "#4fb3b3", blend = true }
+blue = { color = "#5b8fd6", blend = true }
+magenta = { color = "#b07fd6", blend = true }
+
 [config.wallpaper]
 set = false
 command = "awww img {{ image }}"
@@ -48,4 +59,9 @@ type = "SchemeTonalSpot"
 [templates.thunar]
 input_path = "~/.config/matugen/templates/thunar-colors.css"
 output_path = "~/.config/gtk-3.0/thunar-colors.css"
+type = "SchemeTonalSpot"
+
+[templates.palette]
+input_path = "~/.config/matugen/templates/palette.toml"
+output_path = "~/.local/state/dotfiles-wallpaper-palette.toml"
 type = "SchemeTonalSpot"

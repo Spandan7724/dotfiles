@@ -2,6 +2,13 @@
 // All work happens in vmctl.sh; this file only renders its JSON and calls it.
 //
 // Launch: quickshell -n -c vm-manager   (Super + Shift + V)
+//
+// Keys, list page: Up/Down or j/k select a VM, Enter starts it (or opens the
+// console if it is running), s shut down, r reboot, Shift+F force stop,
+// e settings, Delete twice to delete, n new VM, m virt-manager, F5 refresh,
+// Escape closes.
+// New VM page: type to search, Up/Down + Enter pick an OS, Tab moves between
+// fields, Ctrl+Enter creates, Escape goes back.
 
 import Quickshell
 import Quickshell.Io
@@ -39,10 +46,63 @@ FloatingWindow {
 
     property string page: "list"          // list | new
     property string pendingDelete: ""     // VM awaiting a second click on Delete
+    property string selVm: ""             // keyboard-selected VM; by name so refreshes keep it
+
+    readonly property var curVm: vms.find(v => v.name === selVm) || vms[0] || null
 
     function run(args) {
         Quickshell.execDetached(["bash", ctl].concat(args))
         refreshSoon.restart()
+    }
+
+    function isRunning(vm) {
+        return vm.state === "running" || vm.state === "paused" || vm.state === "in shutdown"
+    }
+
+    function moveSel(step) {
+        const i = Math.max(0, Math.min(vms.length - 1, vms.indexOf(curVm) + step))
+        selVm = vms[i].name
+        const card = vmRepeater.itemAt(i)
+        if (card) cardList.ensureVisible(card.y, card.height)
+    }
+
+    function askDelete(name) {
+        if (pendingDelete === name) {
+            pendingDelete = ""
+            run(["delete", name])
+        } else {
+            pendingDelete = name
+            deleteReset.restart()
+        }
+    }
+
+    function listKey(event) {
+        const k = event.key
+        const vm = curVm
+        event.accepted = true
+        if (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
+            event.accepted = false
+        else if (k === Qt.Key_N) openNew()
+        else if (k === Qt.Key_M) run(["manager"])
+        else if (k === Qt.Key_F5) refresh()
+        else if (!vm) event.accepted = false
+        else if (k === Qt.Key_Down || k === Qt.Key_J) moveSel(1)
+        else if (k === Qt.Key_Up || k === Qt.Key_K) moveSel(-1)
+        else if (k === Qt.Key_Return || k === Qt.Key_Enter) run([isRunning(vm) ? "console" : "start", vm.name])
+        else if (k === Qt.Key_S && isRunning(vm)) run(["shutdown", vm.name])
+        else if (k === Qt.Key_R && isRunning(vm)) run(["reboot", vm.name])
+        // Shift, so one stray key cannot pull the plug on a running guest.
+        else if (k === Qt.Key_F && (event.modifiers & Qt.ShiftModifier) && isRunning(vm)) run(["destroy", vm.name])
+        else if (k === Qt.Key_E && !isRunning(vm)) run(["details", vm.name])
+        else if (k === Qt.Key_Delete && !isRunning(vm)) askDelete(vm.name)
+        else event.accepted = false
+    }
+
+    // Keyboard focus follows the page: the list takes keys, the new-VM page
+    // starts in its search box.
+    onPageChanged: {
+        if (page === "list") listPage.forceActiveFocus()
+        else if (creator.mode === "download") searchField.focusInput()
     }
 
     function refresh() {
@@ -161,6 +221,12 @@ FloatingWindow {
         onActivated: root.openNew()
     }
 
+    Shortcut {
+        sequences: ["Ctrl+Return", "Ctrl+Enter"]
+        enabled: root.page === "new"
+        onActivated: creator.create()
+    }
+
     // ---- reusable pieces ------------------------------------------------------
 
     component Btn: Rectangle {
@@ -256,6 +322,11 @@ FloatingWindow {
         property alias text: input.text
         property string placeholder: ""
         property string icon: ""
+        signal upPressed
+        signal downPressed
+        signal accepted
+
+        function focusInput() { input.forceActiveFocus() }
 
         implicitHeight: 36
         radius: 9
@@ -287,6 +358,11 @@ FloatingWindow {
             font.pixelSize: 13
             clip: true
             selectByMouse: true
+            activeFocusOnTab: true
+
+            Keys.onUpPressed: field.upPressed()
+            Keys.onDownPressed: field.downPressed()
+            onAccepted: field.accepted()
 
             Text {
                 visible: input.text === ""
@@ -444,6 +520,9 @@ FloatingWindow {
 
         // ---- list page ----
         Item {
+            id: listPage
+            focus: true
+            Keys.onPressed: event => root.listKey(event)
             visible: root.page === "list"
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -482,8 +561,14 @@ FloatingWindow {
             }
 
             Flickable {
+                id: cardList
                 anchors.fill: parent
                 contentHeight: cards.implicitHeight
+
+                function ensureVisible(y, h) {
+                    if (y < contentY) contentY = y
+                    else if (y + h > contentY + height) contentY = y + h - height
+                }
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
 
@@ -590,6 +675,7 @@ FloatingWindow {
 
                     // Virtual machines
                     Repeater {
+                        id: vmRepeater
                         model: root.vms
 
                         delegate: Rectangle {
@@ -598,13 +684,14 @@ FloatingWindow {
                             readonly property string vmState: modelData.state
                             readonly property bool running: vmState === "running" || vmState === "paused" || vmState === "in shutdown"
                             readonly property bool confirming: root.pendingDelete === modelData.name
+                            readonly property bool keyed: root.curVm !== null && root.curVm.name === modelData.name
 
                             width: cards.width
                             height: 84
                             radius: 14
                             color: Theme.surface
-                            border.width: 1
-                            border.color: Theme.alpha(Theme.outline, 0.25)
+                            border.width: keyed ? 2 : 1
+                            border.color: keyed ? Theme.primary : Theme.alpha(Theme.outline, 0.25)
 
                             RowLayout {
                                 anchors.fill: parent
@@ -692,15 +779,7 @@ FloatingWindow {
                                         danger: true
                                         icon: "󰩺"
                                         text: vmCard.confirming ? "Really delete?" : ""
-                                        onClicked: {
-                                            if (vmCard.confirming) {
-                                                root.pendingDelete = ""
-                                                root.run(["delete", vmCard.modelData.name])
-                                            } else {
-                                                root.pendingDelete = vmCard.modelData.name
-                                                deleteReset.restart()
-                                            }
-                                        }
+                                        onClicked: root.askDelete(vmCard.modelData.name)
                                     }
                                 }
                             }
@@ -721,6 +800,13 @@ FloatingWindow {
 
             property string mode: "download"   // download | iso
             property string search: ""
+            property int cursor: -1                // keyboard highlight in the OS list
+
+            function moveCursor(step) {
+                if (filteredOs.length === 0) return
+                cursor = Math.max(0, Math.min(filteredOs.length - 1, cursor + step))
+                osListView.positionViewAtIndex(cursor, ListView.Contain)
+            }
 
             // Selection
             property string selOs: ""
@@ -874,8 +960,16 @@ FloatingWindow {
                         visible: creator.mode === "download"
                         Layout.fillWidth: true
                         icon: "󰍉"
+                        id: searchField
                         placeholder: "Search " + creator.osList.length + " systems"
-                        onTextChanged: creator.search = text
+                        onTextChanged: {
+                            creator.search = text
+                            creator.cursor = text === "" ? -1 : 0
+                        }
+                        onUpPressed: creator.moveCursor(-1)
+                        onDownPressed: creator.moveCursor(1)
+                        onAccepted: if (creator.cursor >= 0 && creator.cursor < creator.filteredOs.length)
+                                        creator.pickOs(creator.filteredOs[creator.cursor])
                     }
 
                     Text {
@@ -888,6 +982,7 @@ FloatingWindow {
                     }
 
                     ListView {
+                        id: osListView
                         visible: creator.mode === "download"
                         Layout.fillWidth: true
                         Layout.fillHeight: true
@@ -899,12 +994,15 @@ FloatingWindow {
                         delegate: Rectangle {
                             id: osRow
                             required property var modelData
+                            required property int index
                             readonly property bool selected: creator.selOs === modelData.os
 
                             width: ListView.view.width
                             height: 42
                             radius: 9
-                            color: selected ? Theme.alpha(Theme.primary, 0.18) : osHover.containsMouse ? Theme.alpha(Theme.surfaceVariant, 0.6) : "transparent"
+                            color: selected ? Theme.alpha(Theme.primary, 0.18)
+                                 : osHover.containsMouse || index === creator.cursor ? Theme.alpha(Theme.surfaceVariant, 0.6)
+                                 : "transparent"
 
                             Row {
                                 anchors.fill: parent

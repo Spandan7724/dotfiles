@@ -121,14 +121,28 @@ function isIconCodepoint(cp) {
 // A line is shown as its display columns (tab-separated, 1-based like rofi's
 // -display-columns); the whole line is what gets returned. The icon comes from
 // iconColumn when given, else a leading Nerd Font glyph followed by spaces.
-function parseLine(line, displayColumns, iconColumn) {
+// One menu-select line as a row. `req` is the request: displayColumns,
+// iconColumn, detailColumn, and sectionColumn pick tab-separated columns.
+function parseLine(line, req) {
+    req = req || {}
+    var displayColumns = req.displayColumns || []
     var shown = line
     var cols = line.split("\t")
-    if (displayColumns && displayColumns.length) {
-        shown = displayColumns.map(function (n) { return cols[n - 1] || "" })
+    var column = function (n) { return n ? (cols[n - 1] || "") : "" }
+    if (displayColumns.length) {
+        shown = displayColumns.map(column)
             .filter(function (c) { return c.length }).join("   ")
     }
-    var icon = iconColumn ? (cols[iconColumn - 1] || "") : ""
+    // Scripts mark the current choice with a leading "●"; it becomes a badge.
+    var current = false
+    var marker = shown.match(/^\s*●\s+/)
+    if (marker) {
+        current = true
+        shown = shown.substring(marker[0].length)
+    } else {
+        shown = shown.replace(/^\s+/, "")
+    }
+    var icon = column(req.iconColumn)
     var cp = shown.codePointAt(0)
     if (!icon && cp !== undefined && isIconCodepoint(cp)) {
         var glyphLength = cp > 0xFFFF ? 2 : 1
@@ -138,12 +152,44 @@ function parseLine(line, displayColumns, iconColumn) {
             shown = rest.replace(/^\s+/, "")
         }
     }
-    // Two or more spaces separate a label from dimmer detail text.
-    var detail = ""
-    var split = shown.match(/^(.*?\S)\s{3,}(\S.*)$/)
+    // Without a detail column, three or more spaces separate a label from
+    // dimmer detail text.
+    var detail = column(req.detailColumn)
+    var split = req.detailColumn ? null : shown.match(/^(.*?\S)\s{3,}(\S.*)$/)
     if (split) {
         shown = split[1]
         detail = split[2]
     }
-    return { icon: icon, label: shown, detail: detail, value: line }
+    // Hex colours in the swatch column become a row of dots (theme previews).
+    var swatches = column(req.swatchColumn).split(/[\s,]+/)
+        .filter(function (c) { return /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(c) })
+    return { icon: icon, label: shown, detail: detail, value: line, current: current,
+             section: column(req.sectionColumn), swatches: swatches }
+}
+
+// Rofi-style row list ("0,2,5-7") as a set of zero-based indexes.
+function parseRowList(spec) {
+    var out = {}
+    String(spec || "").split(",").forEach(function (part) {
+        var range = part.trim().match(/^(\d+)(?:-(\d+))?$/)
+        if (!range) return
+        var last = range[2] === undefined ? +range[1] : +range[2]
+        for (var i = +range[1]; i <= last; i++) out[i] = true
+    })
+    return out
+}
+
+// Select rows grouped under a header row whenever the section changes.
+function withSections(rows) {
+    if (!rows.some(function (r) { return r.section })) return rows
+    var out = []
+    var last = null
+    rows.forEach(function (r) {
+        if (r.section !== last) {
+            if (r.section) out.push({ kind: "header", label: r.section, icon: "", detail: "", trailing: "" })
+            last = r.section
+        }
+        out.push(r)
+    })
+    return out
 }

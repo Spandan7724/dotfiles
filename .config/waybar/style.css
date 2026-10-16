@@ -152,6 +152,11 @@ window#waybar {
     border-bottom: 1px solid @foreground;
 }
 
+#workspaces .ws.named {
+    padding: 0 7px;
+    font-style: italic;
+}
+
 #clock {
     min-width: 143px;
     font-weight: 700;

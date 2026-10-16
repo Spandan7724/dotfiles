@@ -62,9 +62,12 @@ if [[ "${1:-}" == --run ]]; then
     exit 0
 fi
 
-pick() { # pick <prompt> <option...>
-    local prompt="$1"; shift
-    printf '%s\n' "$@" | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p "$prompt"
+pick() { # pick <prompt> <option> <detail> [<option> <detail>...]
+    local prompt="$1" selection; shift
+    # Rows are "option, detail, option"; the option is read from the last column.
+    selection="$(printf '%s\t%s\n' "$@" | awk -F '\t' '{ print $1 "\t" $2 "\t" $1 }' |
+        "$HOME/.config/hypr/scripts/menu-select" -no-custom -p "$prompt" -display-columns 1 -detail-column 2)" || return 1
+    printf '%s\n' "${selection##*$'\t'}"
 }
 
 input="${1:-}"
@@ -99,13 +102,19 @@ if [[ -z "$input" ]]; then
         exit 1
     }
 
-    # Show the path relative to home and keep the absolute one in a hidden
-    # column, so a long path never widens the menu past what it needs.
-    selection="$(printf '%s\n' "${candidates[@]}" |
-        sed "s|^$HOME/|~/|" |
-        paste -d'\t' - <(printf '%s\n' "${candidates[@]}") |
-        "$HOME/.config/hypr/scripts/menu-select" -p 'Transcode' -display-columns 1)" || exit 0
-    input="${selection#*$'\t'}"
+    # Rows are "name, folder, icon, path": the file name as the title, its
+    # folder (relative to home) under it, an image or video icon, and the
+    # absolute path in the last column.
+    selection="$(printf '%s\n' "${candidates[@]}" | awk -v home="$HOME" '
+        {
+            slash = match($0, /\/[^\/]*$/)
+            folder = substr($0, 1, slash - 1)
+            if (index(folder, home) == 1) folder = "~" substr(folder, length(home) + 1)
+            kind = tolower($0) ~ /\.(mp4|mov|m4v|mkv|webm|avi)$/ ? "video-x-generic" : "image-x-generic"
+            print substr($0, slash + 1) "\t" folder "\t" kind "\t" $0
+        }' |
+        "$HOME/.config/hypr/scripts/menu-select" -p 'Transcode' -display-columns 1 -detail-column 2 -icon-column 3)" || exit 0
+    input="${selection##*$'\t'}"
     [[ -n "$input" && "$input" != "$selection" ]] || exit 0
 fi
 
@@ -117,13 +126,13 @@ type="$(media_type "$input")" || {
 }
 
 if [[ "$type" == image ]]; then
-    format="$(pick 'Format' jpg png)" || exit 0
+    format="$(pick 'Format' jpg 'Smaller files, best for photos' png 'Lossless, best for screenshots')" || exit 0
     [[ -n "$format" ]] || exit 0
-    resolution="$(pick 'Size' high medium low)" || exit 0
+    resolution="$(pick 'Size' high 'Up to 3160 px wide' medium 'Up to 2160 px wide' low 'Up to 1080 px wide')" || exit 0
 else
-    format="$(pick 'Format' mp4 gif)" || exit 0
+    format="$(pick 'Format' mp4 'H.264 video, plays everywhere' gif 'Silent animation at 10 fps')" || exit 0
     [[ -n "$format" ]] || exit 0
-    resolution="$(pick 'Resolution' 4k 1080p 720p)" || exit 0
+    resolution="$(pick 'Resolution' 4k '2160p, encoded as H.265' 1080p 'Full HD' 720p 'HD, smallest files')" || exit 0
 fi
 [[ -n "$resolution" ]] || exit 0
 

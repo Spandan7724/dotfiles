@@ -104,7 +104,7 @@ PanelWindow {
 
     function reset() {
         search.text = request && request.filter ? request.filter : ""
-        cursor = 0
+        cursor = initialCursor()
         hoverOrigin = Qt.point(-1, -1)
         search.forceActiveFocus()
     }
@@ -167,9 +167,33 @@ PanelWindow {
         id: linesFile
         blockLoading: true
         onLoaded: {
-            const cols = root.request ? root.request.displayColumns : []
-            const iconColumn = root.request ? root.request.iconColumn : 0
-            root.lines = text().split("\n").filter(l => l.length).map(l => Model.parseLine(l, cols, iconColumn))
+            const req = root.request || {}
+            const active = Model.parseRowList(req.active)
+            // Long lists (file search) repeat a few icon names many times,
+            // so each name is resolved once.
+            const pictures = {}
+            const picture = name => {
+                if (!(name in pictures)) {
+                    // A window class (zen, dev.zed.Zed) finds its app's icon too.
+                    const entry = name.startsWith("/") ? null : DesktopEntries.heuristicLookup(name)
+                    pictures[name] = name.startsWith("/") ? "file://" + name
+                                   : Quickshell.iconPath(name, true) || (entry ? Quickshell.iconPath(entry.icon, true) : "")
+                }
+                return pictures[name]
+            }
+            root.lines = text().split("\n").filter(l => l.length).map((l, i) => {
+                const line = Model.parseLine(l, req)
+                if (active[i])
+                    line.current = true
+                // An icon theme name or an image path in the icon column is
+                // shown as a picture, like the app launcher's icons.
+                if (/^(\/|[A-Za-z0-9._+-]{2,}$)/.test(line.icon)) {
+                    line.image = picture(line.icon) || undefined
+                    line.icon = line.image ? "" : "\u{f003b}"
+                }
+                return line
+            })
+            root.cursor = root.initialCursor()
         }
     }
 
@@ -239,18 +263,24 @@ PanelWindow {
         return hits.slice(0, limit).map(h => appRow(h.app))
     }
 
+    function lineRow(l) {
+        return { kind: "line", line: l, icon: l.icon, image: l.image, label: l.label, detail: l.detail,
+                 section: l.section, swatches: l.swatches, trailing: l.current ? "current" : "" }
+    }
+
     readonly property var rows: {
         const query = search.text.trim()
         if (mode === "select") {
+            // Section headers only make sense in the original order.
             if (!query)
-                return lines.map(l => ({ kind: "line", line: l, icon: l.icon, label: l.label, detail: l.detail, trailing: "" }))
+                return Model.withSections(lines.map(lineRow))
             const hits = []
             for (const l of lines) {
-                const s = Model.score(query, l.label, l.detail, l.value)
+                const s = Model.score(query, l.label, l.detail + " " + l.section, l.value)
                 if (s > 0) hits.push({ l: l, s: s })
             }
             hits.sort((a, b) => b.s - a.s)
-            return hits.map(h => ({ kind: "line", line: h.l, icon: h.l.icon, label: h.l.label, detail: h.l.detail, trailing: "" }))
+            return hits.map(h => lineRow(h.l))
         }
         if (mode === "apps")
             return query ? appHits(query, 60) : apps.map(appRow)
@@ -261,7 +291,51 @@ PanelWindow {
         return route ? found : found.concat(appHits(query, 6))
     }
 
-    onRowsChanged: cursor = Math.min(cursor, Math.max(0, rows.length - 1))
+    onRowsChanged: {
+        cursor = Math.min(cursor, Math.max(0, rows.length - 1))
+        settleCursor()
+    }
+
+    // Section headers are never selected: the cursor steps over them.
+    function selectable(i) {
+        return i >= 0 && i < rows.length && rows[i].kind !== "header"
+    }
+
+    function moveCursor(delta) {
+        const step = delta > 0 ? 1 : -1
+        let i = Math.max(0, Math.min(rows.length - 1, cursor + delta))
+        while (i >= 0 && i < rows.length && !selectable(i))
+            i += step
+        if (!selectable(i))
+            return
+        cursor = i
+    }
+
+    // Moves the cursor off a header, forwards first.
+    function settleCursor() {
+        if (selectable(cursor) || !rows.length)
+            return
+        let i = cursor
+        while (i < rows.length && !selectable(i)) i++
+        if (!selectable(i)) {
+            i = cursor
+            while (i >= 0 && !selectable(i)) i--
+        }
+        if (selectable(i))
+            cursor = i
+    }
+
+    onCursorChanged: settleCursor()
+
+    // Where the cursor starts: menu-select's -selected-row, else the top.
+    function initialCursor() {
+        const sel = mode === "select" && request ? request.selectedRow : 0
+        if (sel > 0 && lines[sel] && !search.text.trim())
+            return Math.max(0, rows.findIndex(r => r.line === lines[sel]))
+        return 0
+    }
+
+    readonly property int itemCount: rows.filter(r => r.kind !== "header").length
 
     // ---- actions -----------------------------------------------------------------
 
@@ -560,7 +634,7 @@ PanelWindow {
 
                 Text {
                     visible: !root.inputOnly
-                    text: root.rows.length === 1 ? "1 item" : root.rows.length + " items"
+                    text: root.itemCount === 1 ? "1 item" : root.itemCount + " items"
                     color: Theme.faintText
                     font.pixelSize: 11
                 }
@@ -608,13 +682,13 @@ PanelWindow {
                             if (text !== "" && !root.inputOnly) text = ""
                             else if (!root.back()) root.close()
                         } else if (key === Qt.Key_Down || key === Qt.Key_Tab || (ctrl && key === Qt.Key_J) || (ctrl && key === Qt.Key_N)) {
-                            root.cursor = Math.min(root.rows.length - 1, root.cursor + 1)
+                            root.moveCursor(1)
                         } else if (key === Qt.Key_Up || key === Qt.Key_Backtab || (ctrl && key === Qt.Key_K) || (ctrl && key === Qt.Key_P)) {
-                            root.cursor = Math.max(0, root.cursor - 1)
+                            root.moveCursor(-1)
                         } else if (key === Qt.Key_PageDown) {
-                            root.cursor = Math.min(root.rows.length - 1, root.cursor + 8)
+                            root.moveCursor(8)
                         } else if (key === Qt.Key_PageUp) {
-                            root.cursor = Math.max(0, root.cursor - 8)
+                            root.moveCursor(-8)
                         } else if (key === Qt.Key_Return || key === Qt.Key_Enter) {
                             root.activate(root.rows[root.cursor], (event.modifiers & Qt.ShiftModifier) || root.rows.length === 0)
                         } else if (key === Qt.Key_Right && cursorPosition === text.length && root.rows[root.cursor]
@@ -720,7 +794,12 @@ PanelWindow {
                     }
                 }
 
-                onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+                // A section's first row also brings its header into view.
+                onCurrentIndexChanged: {
+                    positionViewAtIndex(currentIndex, ListView.Contain)
+                    if (currentIndex > 0 && !root.selectable(currentIndex - 1))
+                        positionViewAtIndex(currentIndex - 1, ListView.Contain)
+                }
 
                 delegate: Item {
                     id: row
@@ -729,12 +808,40 @@ PanelWindow {
                     required property int index
                     readonly property bool current: index === root.cursor
                     readonly property bool isApp: !!modelData.image
+                    readonly property bool header: modelData.kind === "header"
 
                     width: ListView.view.width
-                    implicitHeight: modelData.detail ? 54 : 44
+                    implicitHeight: header ? (index === 0 ? 24 : 34) : modelData.detail ? 54 : 44
+
+                    // Section header: a small caps label with a hairline.
+                    RowLayout {
+                        visible: row.header
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 14
+                        anchors.bottomMargin: 6
+                        spacing: 10
+
+                        Text {
+                            text: row.header ? row.modelData.label.toUpperCase() : ""
+                            color: Theme.faintText
+                            font.pixelSize: 10
+                            font.weight: Font.DemiBold
+                            font.letterSpacing: 1.2
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: 1
+                            color: Theme.alpha(Theme.foreground, Theme.dark ? 0.08 : 0.1)
+                        }
+                    }
 
                     MouseArea {
                         anchors.fill: parent
+                        enabled: !row.header
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onPositionChanged: mouse => {
@@ -750,6 +857,7 @@ PanelWindow {
                     }
 
                     RowLayout {
+                        visible: !row.header
                         anchors.fill: parent
                         anchors.leftMargin: 16
                         anchors.rightMargin: 12
@@ -783,7 +891,7 @@ PanelWindow {
 
                             IconImage {
                                 anchors.centerIn: parent
-                                implicitSize: 28
+                                implicitSize: row.modelData.kind === "app" ? 28 : 26
                                 visible: row.isApp
                                 source: row.modelData.image || ""
                                 asynchronous: true
@@ -818,18 +926,43 @@ PanelWindow {
                             }
                         }
 
+                        // Colour previews (the theme picker's palettes). The
+                        // ring keeps a dot that matches the card visible.
+                        Row {
+                            visible: !!row.modelData.swatches && row.modelData.swatches.length > 0
+                            spacing: 5
+
+                            Repeater {
+                                model: row.modelData.swatches || []
+
+                                Rectangle {
+                                    required property string modelData
+                                    width: 12
+                                    height: 12
+                                    radius: 6
+                                    color: modelData
+                                    border.width: 1
+                                    border.color: Theme.alpha(Theme.foreground, 0.22)
+                                }
+                            }
+                        }
+
                         Rectangle {
+                            readonly property bool lit: row.modelData.trailing === "on" || row.modelData.trailing === "current"
+
                             visible: row.modelData.trailing === "on" || row.modelData.trailing === "off"
+                                     || row.modelData.trailing === "current"
                             implicitWidth: stateLabel.implicitWidth + 16
                             implicitHeight: 20
                             radius: 10
-                            color: row.modelData.trailing === "on" ? Theme.alpha(Theme.primary, 0.3) : Theme.alpha(Theme.foreground, 0.07)
+                            color: lit ? Theme.alpha(Theme.primary, 0.3) : Theme.alpha(Theme.foreground, 0.07)
 
                             Text {
                                 id: stateLabel
                                 anchors.centerIn: parent
-                                text: row.modelData.trailing === "on" ? "On" : "Off"
-                                color: row.modelData.trailing === "on" ? Theme.foreground : Theme.dimText
+                                text: row.modelData.trailing === "current" ? "Current"
+                                    : row.modelData.trailing === "on" ? "On" : "Off"
+                                color: parent.lit ? Theme.foreground : Theme.dimText
                                 font.pixelSize: 10
                                 font.weight: Font.DemiBold
                             }
@@ -847,7 +980,7 @@ PanelWindow {
             }
 
             ColumnLayout {
-                visible: !root.inputOnly && root.rows.length === 0
+                visible: !root.inputOnly && root.itemCount === 0
                 Layout.fillWidth: true
                 Layout.topMargin: 10
                 Layout.bottomMargin: 10

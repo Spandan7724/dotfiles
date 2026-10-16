@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Generate a theme's application files from its colors.toml palette.
 
-    generate.py <theme>          app files for Thunar, Quickshell, Hyprland,
-                                 NvChad, Doom Emacs, Helix, and btop
-    generate.py <theme> --all    also the core files (mode, Kitty, Waybar, Rofi,
-                                 Dunst, Hyprlock, Wlogout, Starship); for new
-                                 themes that have no hand-written ones
+    generate.py <theme>           app files for Thunar, Quickshell, Hyprland,
+                                  NvChad, Doom Emacs, Helix, and btop, plus the
+                                  extras below
+    generate.py <theme> --all     also the core files (mode, Kitty, Waybar, Rofi,
+                                  Dunst, Hyprlock, Wlogout, Starship); for new
+                                  themes that have no hand-written ones
+    generate.py <theme> --extras  only GTK 3 and 4, Qt (qt6ct), fish, zsh,
+                                  fzf, zathura, cava, and Vicinae; wallpaper.sh uses this for
+                                  the Matugen palette of the wallpaper themes
 
 The palette uses Omarchy's colors.toml keys. Its [apps] table names a built-in
 theme for NvChad, Doom, Helix, or btop; "keep" leaves a hand-made file alone.
@@ -82,6 +86,11 @@ def load_palette(theme_dir):
     p.setdefault("orange", p.get("yellow", p["red"]))
     for name in ("red", "green", "yellow", "blue", "magenta", "cyan"):
         p.setdefault("bright_" + name, p[name])
+    # Status colours. Palettes may set them; otherwise the terminal colours
+    # stand in.
+    p.setdefault("error", p["red"])
+    p.setdefault("warning", p["yellow"])
+    p.setdefault("success", p["green"])
     p.setdefault("selection_background", p["selection"])
     p.setdefault("selection_foreground", p["bright_foreground"])
     p["on_accent"] = on_color(p["accent"])
@@ -143,7 +152,7 @@ def quickshell_json(p):
         "primary": p["accent"],
         "onPrimary": p["on_accent"],
         "outline": p["muted"],
-        "error": p["red"],
+        "error": p["error"],
     }, indent=4) + "\n"
 
 
@@ -500,6 +509,399 @@ def btop_theme(p):
     return "\n".join(lines) + "\n"
 
 
+# ---- desktop-wide extras: GTK, Qt, shell tools -----------------------------------
+
+def surfaces(p):
+    """Background layers shared by the GTK and Qt themes."""
+    bg, fg, dark = p["background"], p["foreground"], p["dark"]
+    return {
+        "window": bg,
+        # Lists and text areas: a step deeper than the window on dark themes,
+        # a step brighter on light ones, as Adwaita does.
+        "view": p["dark_background"] if dark else mix(bg, "#ffffff", 0.6),
+        "raised": p["lighter_background"] if p["lighter_background"] != bg else mix(bg, fg, 0.06),
+        "sidebar": mix(bg, p["lighter_background"], 0.5) if dark else mix(bg, "#000000", 0.03),
+        "border": mix(bg, fg, 0.14),
+        "card": mix(bg, fg, 0.05),
+        "button": mix(bg, fg, 0.10),
+    }
+
+
+def gtk_colors(p):
+    """libadwaita's named colours, shared by the GTK 3 and GTK 4 files."""
+    s = surfaces(p)
+    fg = p["foreground"]
+    colors = {
+        "accent_color": p["accent"],
+        "accent_bg_color": p["accent"],
+        "accent_fg_color": p["on_accent"],
+        "window_bg_color": s["window"],
+        "window_fg_color": fg,
+        "view_bg_color": s["view"],
+        "view_fg_color": fg,
+        "headerbar_bg_color": s["raised"],
+        "headerbar_fg_color": fg,
+        "headerbar_border_color": fg,
+        "headerbar_backdrop_color": s["window"],
+        "headerbar_shade_color": rgba(p["dark_background"], 0.36 if p["dark"] else 0.12),
+        "headerbar_darker_shade_color": rgba(p["dark_background"], 0.9 if p["dark"] else 0.12),
+        "sidebar_bg_color": s["sidebar"],
+        "sidebar_fg_color": fg,
+        "sidebar_backdrop_color": s["window"],
+        "sidebar_border_color": s["border"],
+        "sidebar_shade_color": rgba(p["dark_background"], 0.25 if p["dark"] else 0.07),
+        "secondary_sidebar_bg_color": s["window"],
+        "secondary_sidebar_fg_color": fg,
+        "secondary_sidebar_backdrop_color": s["window"],
+        "secondary_sidebar_border_color": s["border"],
+        "secondary_sidebar_shade_color": rgba(p["dark_background"], 0.25 if p["dark"] else 0.07),
+        "card_bg_color": s["card"],
+        "card_fg_color": fg,
+        "card_shade_color": rgba(p["dark_background"], 0.36 if p["dark"] else 0.07),
+        "thumbnail_bg_color": s["raised"],
+        "thumbnail_fg_color": fg,
+        "dialog_bg_color": s["raised"],
+        "dialog_fg_color": fg,
+        "popover_bg_color": s["raised"],
+        "popover_fg_color": fg,
+        "popover_shade_color": rgba(p["dark_background"], 0.25 if p["dark"] else 0.07),
+        "shade_color": rgba(p["dark_background"], 0.25 if p["dark"] else 0.07),
+        "scrollbar_outline_color": rgba(p["dark_background"], 0.5) if p["dark"] else "#ffffff",
+    }
+    for name in ("destructive", "error", "warning", "success"):
+        c = p["error"] if name == "destructive" else p[name]
+        colors[f"{name}_color"] = c
+        colors[f"{name}_bg_color"] = c
+        colors[f"{name}_fg_color"] = on_color(c)
+    return colors
+
+
+def legacy_gtk_colors(p, colors):
+    """GTK's older colour names, which GTK 3 apps and GTK 4's built-in theme
+    export for application stylesheets."""
+    return {
+        "theme_bg_color": colors["window_bg_color"],
+        "theme_fg_color": colors["window_fg_color"],
+        "theme_base_color": colors["view_bg_color"],
+        "theme_text_color": colors["view_fg_color"],
+        "theme_selected_bg_color": p["accent"],
+        "theme_selected_fg_color": p["on_accent"],
+        "theme_unfocused_bg_color": colors["window_bg_color"],
+        "theme_unfocused_fg_color": colors["window_fg_color"],
+        "theme_unfocused_base_color": colors["view_bg_color"],
+        "theme_unfocused_text_color": colors["view_fg_color"],
+        "theme_unfocused_selected_bg_color": mix(p["accent"], p["background"], 0.25),
+        "theme_unfocused_selected_fg_color": p["on_accent"],
+        "borders": surfaces(p)["border"],
+        "unfocused_borders": surfaces(p)["border"],
+        "insensitive_bg_color": colors["window_bg_color"],
+        "insensitive_fg_color": mix(p["foreground"], p["background"], 0.5),
+        "insensitive_base_color": colors["view_bg_color"],
+    }
+
+
+def gtk3_css(p, colors):
+    named = {**colors, **legacy_gtk_colors(p, colors)}
+    lines = "\n".join(f"@define-color {k} {v};" for k, v in named.items())
+    return f"""/* GTK 3 colours for this theme, read by gtk-3.0/gtk.css. They take effect
+ * with the adw-gtk3 theme, which uses libadwaita's named colours.
+ * Generated by themes/generate.py from colors.toml. */
+{lines}
+"""
+
+
+def gtk4_css(p, colors):
+    # libadwaita 1.6 and newer read CSS variables; the named colours are kept
+    # for application stylesheets that still refer to them.
+    named = {**colors, **legacy_gtk_colors(p, colors)}
+    names = "\n".join(f"@define-color {k} {v};" for k, v in named.items())
+    variables = "\n".join(f"    --{k.replace('_', '-')}: {v};" for k, v in colors.items())
+    accent, on_accent = p["accent"], p["on_accent"]
+    c = colors
+    return f"""/* GTK 4 and libadwaita colours for this theme, read by gtk-4.0/gtk.css.
+ * Generated by themes/generate.py from colors.toml. */
+{names}
+
+:root {{
+{variables}
+}}
+
+/* Plain GTK 4 apps (pavucontrol, zathura) draw GTK's built-in Adwaita, whose
+ * widgets use fixed colours rather than the ones above. These rules give the
+ * common widgets the theme's colours; libadwaita apps get the same values. */
+window.background {{ background-color: {c['window_bg_color']}; color: {c['window_fg_color']}; }}
+headerbar {{ background-color: {c['headerbar_bg_color']}; color: {c['headerbar_fg_color']}; }}
+.view, textview > text, iconview, list, listview, columnview, treeview.view {{
+    background-color: {c['view_bg_color']};
+    color: {c['view_fg_color']};
+}}
+popover > contents, popover > arrow {{ background-color: {c['popover_bg_color']}; color: {c['popover_fg_color']}; }}
+notebook > header {{ background-color: {c['headerbar_bg_color']}; }}
+notebook > stack {{ background-color: {c['window_bg_color']}; }}
+notebook > header.top > tabs > tab:checked {{ box-shadow: inset 0 -3px {accent}; }}
+notebook > header.bottom > tabs > tab:checked {{ box-shadow: inset 0 3px {accent}; }}
+scale > trough > highlight, progressbar > trough > progress, levelbar > trough > block.filled {{
+    background-color: {accent};
+}}
+switch:checked, checkbutton > check:checked, checkbutton > radio:checked {{
+    background-color: {accent};
+    color: {on_accent};
+}}
+button.suggested-action {{ background-color: {accent}; color: {on_accent}; }}
+button.destructive-action {{ background-color: {c['destructive_bg_color']}; color: {c['destructive_fg_color']}; }}
+selection, row:selected, *:selected:focus-within {{ background-color: {rgba(accent, 0.3)}; }}
+link, .link {{ color: {accent}; }}
+*:focus-visible {{ outline-color: {rgba(accent, 0.5)}; }}
+"""
+
+
+QT_ROLES = ("WindowText", "Button", "Light", "Midlight", "Dark", "Mid", "Text",
+            "BrightText", "ButtonText", "Base", "Window", "Shadow", "Highlight",
+            "HighlightedText", "Link", "LinkVisited", "AlternateBase", "NoRole",
+            "ToolTipBase", "ToolTipText", "PlaceholderText", "Accent")
+
+
+def qt_files(p):
+    """qt6ct's colour scheme, and its main config pointing at it."""
+    s = surfaces(p)
+    bg, fg = p["background"], p["foreground"]
+    active = {
+        "WindowText": fg, "Button": s["button"], "Light": mix(s["button"], fg, 0.25),
+        "Midlight": mix(s["button"], fg, 0.12), "Dark": p["dark_background"],
+        "Mid": s["border"], "Text": fg, "BrightText": p["bright_foreground"],
+        "ButtonText": fg, "Base": s["view"], "Window": bg, "Shadow": "#000000",
+        "Highlight": p["accent"], "HighlightedText": p["on_accent"], "Link": p["accent"],
+        "LinkVisited": p["magenta"], "AlternateBase": mix(s["view"], fg, 0.04),
+        "NoRole": bg, "ToolTipBase": s["raised"], "ToolTipText": fg,
+        "PlaceholderText": p["muted"], "Accent": p["accent"],
+    }
+    dim = lambda c: mix(c, bg, 0.5)
+    disabled = dict(active, WindowText=dim(fg), Text=dim(fg), ButtonText=dim(fg),
+                    Highlight=mix(p["accent"], bg, 0.6), HighlightedText=dim(p["on_accent"]),
+                    PlaceholderText=dim(p["muted"]))
+    inactive = dict(active, Highlight=mix(p["accent"], bg, 0.25))
+    row = lambda d: ", ".join("#ff" + d[r].lstrip("#") for r in QT_ROLES)
+    scheme = f"""# qt6ct colour scheme for this theme, used through qt6ct/qt6ct.conf.
+# Generated by themes/generate.py from colors.toml.
+[ColorScheme]
+active_colors={row(active)}
+disabled_colors={row(disabled)}
+inactive_colors={row(inactive)}
+"""
+    config = f"""# qt6ct settings, copied to qt6ct/qt6ct.conf by themes/apply.sh. Edits made
+# in the qt6ct window are replaced on the next theme change.
+[Appearance]
+color_scheme_path={THEMES / 'current' / 'qt6ct-colors.conf'}
+custom_palette=true
+icon_theme={'Papirus-Dark' if p['dark'] else 'Papirus'}
+standard_dialogs=default
+style=Fusion
+"""
+    return {"qt6ct-colors.conf": scheme, "qt6ct.conf": config}
+
+
+def fish_fish(p):
+    """Shell highlighting from the editor syntax colours, so a command line
+    reads like code in the editor. Universal variables reach running shells."""
+    syn = p["syntax"]
+    c = lambda x: x.lstrip("#")
+    sel = c(p["selection"])
+    colors = {
+        "fish_color_normal": c(p["foreground"]),
+        "fish_color_command": c(syn["function"]) + (" --bold" if syn["bold_functions"] else ""),
+        "fish_color_keyword": c(syn["keyword"]) + (" --bold" if syn["bold_keywords"] else ""),
+        "fish_color_quote": c(syn["string"]) + (" --italics" if syn["italic_strings"] else ""),
+        "fish_color_redirection": c(syn["operator"]),
+        "fish_color_end": c(syn["operator"]),
+        "fish_color_error": c(p["error"]),
+        "fish_color_param": c(syn["variable"]),
+        "fish_color_option": c(syn["type"]),
+        "fish_color_comment": c(syn["comment"]) + (" --italics" if syn["italic_comments"] else ""),
+        "fish_color_operator": c(syn["operator"]),
+        "fish_color_escape": c(syn["constant"]),
+        "fish_color_autosuggestion": c(p["muted"]),
+        "fish_color_valid_path": "--underline",
+        "fish_color_cancel": c(p["error"]),
+        "fish_color_selection": f"{c(p['bright_foreground'])} --background={sel}",
+        "fish_color_search_match": f"{c(p['bright_foreground'])} --background={sel}",
+        "fish_color_history_current": "--bold",
+        "fish_color_user": c(p["success"]),
+        "fish_color_host": c(p["accent"]),
+        "fish_color_cwd": c(p["accent"]),
+        "fish_color_cwd_root": c(p["error"]),
+        "fish_pager_color_prefix": f"{c(p['accent'])} --bold",
+        "fish_pager_color_completion": c(p["foreground"]),
+        "fish_pager_color_description": c(p["muted"]),
+        "fish_pager_color_progress": f"{c(p['on_accent'])} --background={c(p['accent'])}",
+        "fish_pager_color_selected_background": f"--background={sel}",
+    }
+    body = "\n".join(f"set -U {k} {v}" for k, v in colors.items())
+    return f"""# fish colours for this theme; themes/apply.sh sources this in fish, and the
+# universal variables reach shells that are already open.
+# Generated by themes/generate.py from colors.toml.
+{body}
+"""
+
+
+def zsh_zsh(p):
+    """zsh-syntax-highlighting and zsh-autosuggestions styles, with the same
+    mapping from editor syntax colours as fish. ~/.zshrc sources this and
+    reloads it at the next prompt whenever it changes."""
+    syn = p["syntax"]
+    style = lambda colour, *extra: ",".join([f"fg={colour}", *[e for e in extra if e]])
+    bold_fn = "bold" if syn["bold_functions"] else ""
+    bold_kw = "bold" if syn["bold_keywords"] else ""
+    italic_str = "italic" if syn["italic_strings"] else ""
+    italic_comment = "italic" if syn["italic_comments"] else ""
+    styles = {
+        "default": style(syn["variable"]),
+        "unknown-token": style(p["error"]),
+        "reserved-word": style(syn["keyword"], bold_kw),
+        "alias": style(syn["function"], bold_fn),
+        "suffix-alias": style(syn["function"], bold_fn),
+        "global-alias": style(syn["function"], bold_fn),
+        "builtin": style(syn["function"], bold_fn),
+        "function": style(syn["function"], bold_fn),
+        "command": style(syn["function"], bold_fn),
+        "precommand": style(syn["function"], bold_fn, "italic"),
+        "hashed-command": style(syn["function"], bold_fn),
+        "autodirectory": style(syn["variable"], "underline"),
+        "path": style(syn["variable"], "underline"),
+        "globbing": style(syn["constant"]),
+        "history-expansion": style(syn["constant"]),
+        "commandseparator": style(syn["operator"]),
+        "redirection": style(syn["operator"]),
+        "single-hyphen-option": style(syn["type"]),
+        "double-hyphen-option": style(syn["type"]),
+        "back-quoted-argument": style(syn["operator"]),
+        "single-quoted-argument": style(syn["string"], italic_str),
+        "double-quoted-argument": style(syn["string"], italic_str),
+        "dollar-quoted-argument": style(syn["string"], italic_str),
+        "dollar-double-quoted-argument": style(syn["constant"]),
+        "back-double-quoted-argument": style(syn["constant"]),
+        "back-dollar-quoted-argument": style(syn["constant"]),
+        "assign": style(syn["variable"]),
+        "comment": style(syn["comment"], italic_comment),
+        "arg0": style(syn["function"], bold_fn),
+    }
+    body = "\n".join(f"ZSH_HIGHLIGHT_STYLES[{k}]='{v}'" for k, v in styles.items())
+    return f"""# zsh highlighting colours for this theme, sourced by ~/.zshrc.
+# Generated by themes/generate.py from colors.toml.
+typeset -gA ZSH_HIGHLIGHT_STYLES
+{body}
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg={p["muted"]}'
+"""
+
+
+def fzf_opts(p):
+    """Read through FZF_DEFAULT_OPTS_FILE (environment.d/10-dotfiles.conf)."""
+    colors = {
+        "fg": p["foreground"], "fg+": p["bright_foreground"], "bg": "-1",
+        "bg+": p["selection"], "hl": p["accent"], "hl+": p["accent"],
+        "info": p["muted"], "border": p["selection"], "separator": p["selection"],
+        "scrollbar": p["selection"], "label": p["muted"], "prompt": p["accent"],
+        "pointer": p["accent"], "marker": p["success"], "spinner": p["accent"],
+        "header": p["muted"], "query": p["foreground"], "gutter": "-1",
+    }
+    # The file is read as plain options, so it carries no comment.
+    return "--color=" + ",".join(f"{k}:{v}" for k, v in colors.items()) + "\n"
+
+
+def zathura_rc(p):
+    s = surfaces(p)
+    bg, fg = p["background"], p["foreground"]
+    settings = {
+        "default-bg": bg, "default-fg": fg,
+        "statusbar-bg": s["raised"], "statusbar-fg": fg,
+        "inputbar-bg": bg, "inputbar-fg": fg,
+        "notification-bg": s["raised"], "notification-fg": fg,
+        "notification-error-bg": s["raised"], "notification-error-fg": p["error"],
+        "notification-warning-bg": s["raised"], "notification-warning-fg": p["warning"],
+        "highlight-color": rgba(p["warning"], 0.35),
+        "highlight-active-color": rgba(p["accent"], 0.45),
+        "completion-bg": s["raised"], "completion-fg": fg,
+        "completion-group-bg": bg, "completion-group-fg": p["muted"],
+        "completion-highlight-bg": p["accent"], "completion-highlight-fg": p["on_accent"],
+        "index-bg": bg, "index-fg": fg,
+        "index-active-bg": p["selection"], "index-active-fg": p["bright_foreground"],
+        # Ctrl+R shows documents in the theme's colours.
+        "recolor-lightcolor": bg, "recolor-darkcolor": fg,
+    }
+    body = "\n".join(f'set {k} "{v}"' for k, v in settings.items())
+    return f"# zathura colours for this theme, included by zathura/zathurarc.\n# Generated by themes/generate.py from colors.toml.\n{body}\n"
+
+
+def cava_theme(p):
+    """Bars rise from the accent through the theme's colours; greyscale themes
+    stay grey until the warning and error colours near the top."""
+    steps = [mix(p["accent"], p["background"], 0.35), p["accent"], p["cyan"],
+             p["green"], p["yellow"], p["orange"], p["warning"], p["error"]]
+    body = "\n".join(f"gradient_color_{i} = '{c}'" for i, c in enumerate(steps, 1))
+    return f"# cava colours for this theme, loaded as cava/themes/dotfiles.\n# Generated by themes/generate.py from colors.toml.\n[color]\ngradient = 1\n{body}\n"
+
+
+def vicinae_toml(p):
+    """Vicinae theme; reload-apps.sh installs it as the "dotfiles" theme."""
+    s = surfaces(p)
+    bg, fg, accent = p["background"], p["foreground"], p["accent"]
+    tables = {
+        "colors.core": {
+            "background": bg, "foreground": fg,
+            "secondary_background": s["raised"], "border": s["border"],
+            "accent": accent, "accent_foreground": p["on_accent"],
+        },
+        "colors.main_window": {"border": s["border"]},
+        "colors.accents": {
+            "blue": p["blue"], "green": p["green"], "magenta": p["magenta"],
+            "orange": p["orange"], "purple": p["magenta"], "red": p["red"],
+            "yellow": p["yellow"], "cyan": p["cyan"],
+        },
+        "colors.text": {
+            "default": fg, "muted": p["muted"],
+            "danger": p["error"], "success": p["success"],
+        },
+        "colors.text.selection": {"background": accent, "foreground": p["on_accent"]},
+        "colors.input": {"border": s["border"], "border_focus": accent, "border_error": p["error"]},
+        "colors.list.item.hover": {"background": s["card"], "foreground": fg},
+        "colors.list.item.selection": {
+            "background": p["selection_background"], "foreground": p["selection_foreground"],
+            "secondary_background": s["button"], "secondary_foreground": fg,
+        },
+        "colors.grid.item": {"background": s["raised"]},
+        "colors.grid.item.selection": {"outline": accent},
+        "colors.loading": {"bar": accent, "spinner": accent},
+    }
+    body = "\n\n".join(
+        f"[{name}]\n" + "\n".join(f'{k} = "{v}"' for k, v in values.items())
+        for name, values in tables.items())
+    variant = "dark" if p["dark"] else "light"
+    return f"""# Vicinae colours for this theme. Generated by themes/generate.py from colors.toml.
+[meta]
+version = 1
+name = "Dotfiles"
+description = "The current dotfiles theme"
+variant = "{variant}"
+inherits = "vicinae-{variant}"
+
+{body}
+"""
+
+
+def extra_files(p):
+    colors = gtk_colors(p)
+    return {
+        "vicinae.toml": vicinae_toml(p),
+        "gtk3.css": gtk3_css(p, colors),
+        "gtk4.css": gtk4_css(p, colors),
+        **qt_files(p),
+        "fish.fish": fish_fish(p),
+        "zsh.zsh": zsh_zsh(p),
+        "fzf.opts": fzf_opts(p),
+        "zathura.rc": zathura_rc(p),
+        "cava": cava_theme(p),
+    }
+
+
 # ---- core files for brand-new themes -------------------------------------------
 
 def core_files(p):
@@ -536,13 +938,13 @@ color15 {p['bright_foreground']}
 @define-color foreground {fg};
 @define-color muted {muted};
 @define-color hover {accent};
-@define-color critical {p['bright_red']};
+@define-color critical {p['error']};
 """
     s = lambda c: c.lstrip("#")
     rofi = f"""* {{
     bg: #{s(bg)}f2; bg-alt: #{s(p['lighter_background'])}ff; bg-hover: #{s(p['selection'])}ff; bg-selected: #{s(p['selection'])}ff;
     fg: #{s(fg)}ff; fg-muted: #{s(muted)}ff; fg-dark: #{s(bg)}ff;
-    accent: #{ah}ff; accent-soft: #{ah}44; urgent: #{s(p['bright_red'])}ff; border-color: #{ah}66;
+    accent: #{ah}ff; accent-soft: #{ah}44; urgent: #{s(p['error'])}ff; border-color: #{ah}66;
 }}
 """
     icons = "Papirus-Dark, Papirus, Adwaita" if p["dark"] else "Papirus, Adwaita"
@@ -558,15 +960,15 @@ color15 {p['bright_foreground']}
     foreground = "{fg}"
     frame_color = "{accent}"
 [urgency_critical]
-    background = "#{s(mix(bg, p['bright_red'], 0.12))}f2"
+    background = "#{s(mix(bg, p['error'], 0.12))}f2"
     foreground = "{p['bright_foreground']}"
-    frame_color = "{p['bright_red']}"
+    frame_color = "{p['error']}"
 """
     hyprlock = f"""$lockFg = {hypr_rgba(fg)}
 $lockFgMuted = {hypr_rgba(muted, 'dd')}
 $lockAccent = {hypr_rgba(accent, 'ee')}
-$lockCheck = {hypr_rgba(p['green'], 'ee')}
-$lockFail = {hypr_rgba(p['bright_red'], 'ee')}
+$lockCheck = {hypr_rgba(p['success'], 'ee')}
+$lockFail = {hypr_rgba(p['error'], 'ee')}
 $lockInner = {hypr_rgba(bg, '88')}
 """
     wlogout = f"""@define-color wlogout_scrim {rgba(p['dark_background'], 0.45)};
@@ -606,7 +1008,7 @@ yellow = "{p['yellow']}"
 orange = "{p['orange']}"
 cyan = "{p['cyan']}"
 green = "{p['green']}"
-error = "{p['bright_red']}"
+error = "{p['error']}"
 """
     return {
         "mode": ("dark" if p["dark"] else "light") + "\n",
@@ -630,6 +1032,12 @@ def main():
         sys.exit(f"No colors.toml in {theme_dir}")
     p = load_palette(theme_dir)
 
+    if "--extras" in sys.argv[2:]:
+        for name, content in extra_files(p).items():
+            (theme_dir / name).write_text(content)
+        print(f"{theme_dir.name}: extras")
+        return
+
     files = {
         "thunar.css": thunar_css(p),
         "quickshell.json": quickshell_json(p),
@@ -637,6 +1045,7 @@ def main():
         "helix.toml": helix_toml(p),
         **nvim_files(p),
         **doom_files(p),
+        **extra_files(p),
     }
     if p["apps"].get("btop") != "keep":
         files["btop.theme"] = btop_theme(p)

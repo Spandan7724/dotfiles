@@ -257,19 +257,19 @@ max_height = 90
 # background must also be defined in hex or remain commented out. 1 = on, 0 = off.
 # You can define as many as 8 different colors. They range from bottom to top of screen
 
-gradient = 1
+; gradient = 1
 
 # top = black
-gradient_color_1 = '#111111'
-gradient_color_2 = '#222222'
-gradient_color_3 = '#333333'
-gradient_color_4 = '#444444'
+; gradient_color_1 = '#111111'
+; gradient_color_2 = '#222222'
+; gradient_color_3 = '#333333'
+; gradient_color_4 = '#444444'
 
 # bottom = white
-gradient_color_5 = '#666666'
-gradient_color_6 = '#888888'
-gradient_color_7 = '#BBBBBB'
-gradient_color_8 = '#FFFFFF'
+; gradient_color_5 = '#666666'
+; gradient_color_6 = '#888888'
+; gradient_color_7 = '#BBBBBB'
+; gradient_color_8 = '#FFFFFF'
 
 
 # Horizontal is only supported on noncurses output.
@@ -293,7 +293,8 @@ gradient_color_8 = '#FFFFFF'
 
 # use theme file instead of defining colors in this file
 # themes are located in $HOME/.config/cava/themes
-; theme = 'none'
+# Colours follow the desktop theme: themes/dotfiles links to themes/current/cava.
+theme = 'dotfiles'
 
 
 [smoothing]

@@ -1,7 +1,17 @@
-
 [Default Applications]
 x-scheme-handler/http=zen.desktop
 x-scheme-handler/https=zen.desktop
 text/html=zen.desktop
 x-scheme-handler/about=zen.desktop
 x-scheme-handler/unknown=zen.desktop
+x-scheme-handler/claude-cli=claude-code-url-handler.desktop
+x-scheme-handler/codex=chatgpt.desktop
+application/pdf=org.pwmt.zathura.desktop
+image/jpeg=imv.desktop
+image/png=imv.desktop
+image/webp=imv.desktop
+image/gif=imv.desktop
+image/avif=imv.desktop
+
+[Added Associations]
+text/x-tex=dev.zed.Zed.desktop;

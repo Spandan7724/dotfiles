@@ -1,5 +1,5 @@
 * {
     bg: #101315f2; bg-alt: #101315ff; bg-hover: #343d41ff; bg-selected: #343d41ff;
-    fg: #caccccff; fg-muted: #4b4e55ff; fg-dark: #101315ff;
+    fg: #caccccff; fg-muted: #8a9095ff; fg-dark: #101315ff;
     accent: #798186ff; accent-soft: #79818644; urgent: #de6145ff; border-color: #79818666;
 }

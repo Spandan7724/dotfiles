@@ -27,6 +27,7 @@ end
 section("Apps")
 bind(mainMod .. " + T", launch(scripts .. "/default-launcher.sh terminal"), "Open default terminal")
 bind(mainMod .. " + D", launch(scripts .. "/apps-menu.sh"), "Open applications menu")
+bind("ALT + Space", launch("vicinae toggle"), "Open launcher (apps, files, calculator, clipboard)")
 bind(mainMod .. " + E", launch(scripts .. "/default-launcher.sh file-manager"), "Open default file manager")
 bind(mainMod .. " + SHIFT + N", launch(scripts .. "/default-launcher.sh notes"), "Open notes (default notes app)")
 bind(mainMod .. " + B", launch(scripts .. "/default-launcher.sh browser"), "Open default browser")
@@ -42,6 +43,7 @@ bind(mainMod .. " + SHIFT + slash", launch(scripts .. "/hyprmod-launch.sh"), "Op
 section("Apps")
 bind(mainMod .. " + A", launch("pavucontrol"), "Open audio settings")
 bind(mainMod .. " + SHIFT + A", launch(scripts .. "/agent-launcher.sh"), "Start coding agent in a chosen folder")
+bind(mainMod .. " + CTRL + A", launch(scripts .. "/agent-launcher.sh --choose"), "Choose a coding agent, then a folder")
 bind(mainMod .. " + SHIFT + B", launch(terminal .. " --class dotfiles-btop -e btop"), "Open system monitor")
 section("Tools")
 bind(mainMod .. " + R", launch(scripts .. "/file-search.sh"), "Search files")
@@ -76,8 +78,8 @@ bind(mainMod .. " + backslash", hl.dsp.layout("togglesplit"), "Toggle dwindle sp
 bind(mainMod .. " + SHIFT + backslash", hl.dsp.layout("swapsplit"), "Swap the two halves of the current split")
 bind(mainMod .. " + SHIFT + minus", hl.dsp.layout("splitratio -0.05"), "Shrink current split", { repeating = true })
 bind(mainMod .. " + SHIFT + equal", hl.dsp.layout("splitratio +0.05"), "Grow current split", { repeating = true })
-local opacity_steps = { 1.0, 0.9, 0.8, 0.7 }
-local opacity_index = {}
+local default_opacity = 0.9 -- keep in sync with the opacity rule in rules.lua
+local opacity_opaque = {}
 
 section("Windows")
 bind(mainMod .. " + O", launch(scripts .. "/window-pop.sh"), "Pop window out (float and pin)")
@@ -87,16 +89,14 @@ bind(mainMod .. " + SHIFT + O", function()
         return
     end
 
-    local next_index = (opacity_index[window.address] or 1) + 1
-    if next_index > #opacity_steps then
-        next_index = 1
-    end
-    opacity_index[window.address] = next_index
-    hl.dispatch(hl.dsp.window.set_prop({
-        prop = "opacity",
-        value = tostring(opacity_steps[next_index]) .. " override",
-    }))
-end, "Cycle active-window opacity")
+    local opaque = not opacity_opaque[window.address]
+    opacity_opaque[window.address] = opaque or nil
+    -- set_prop "opacity" only covers the focused state; opacity_inactive is a
+    -- separate prop, so set both or the window reverts to the rule when unfocused.
+    local alpha = tostring(opaque and 1.0 or default_opacity)
+    hl.dispatch(hl.dsp.window.set_prop({ prop = "opacity", value = alpha .. " override" }))
+    hl.dispatch(hl.dsp.window.set_prop({ prop = "opacity_inactive", value = alpha }))
+end, "Toggle active-window opacity between opaque and default")
 
 -- Mouse move and resize. These also rearrange and resize tiled windows.
 section("Windows")
@@ -199,6 +199,7 @@ bind("ALT + Tab", hl.dsp.window.cycle_next({ next = true }), "Focus next window"
 bind("ALT + SHIFT + Tab", hl.dsp.window.cycle_next({ next = false }), "Focus previous window")
 section("Workspaces")
 bind(mainMod .. " + Tab", launch(scripts .. "/workspace-overview.sh toggle"), "Open workspace and window overview")
+bind(mainMod .. " + SHIFT + Tab", hl.dsp.focus({ workspace = "previous" }), "Toggle to previous workspace")
 
 -- HyprExpo activates this submap while its overview is open. Arrow keys move
 -- between workspace previews, Enter selects one, and Escape closes the view.
@@ -247,11 +248,24 @@ for i = 1, 10 do
     bind(mainMod .. " + CTRL + " .. key, hl.dsp.window.move({ workspace = i, follow = false }), "Move window silently to workspace " .. i)
 end
 
+-- Workspaces 11-20 on the same digits with Alt added.
+for i = 11, 20 do
+    local key = i % 10
+    bind(mainMod .. " + ALT + " .. key, hl.dsp.focus({ workspace = i }), "Switch to workspace " .. i)
+    bind(mainMod .. " + ALT + SHIFT + " .. key, hl.dsp.window.move({ workspace = i, follow = true }), "Move window and follow to workspace " .. i)
+    bind(mainMod .. " + ALT + CTRL + " .. key, hl.dsp.window.move({ workspace = i, follow = false }), "Move window silently to workspace " .. i)
+end
+bind(mainMod .. " + ALT + Tab", launch(scripts .. "/workspace-menu.sh"), "Switch, create, rename, or move to named workspaces")
+
 bind(mainMod .. " + Page_Down", hl.dsp.focus({ workspace = "e+1" }), "Next occupied workspace")
 bind(mainMod .. " + Page_Up", hl.dsp.focus({ workspace = "e-1" }), "Previous occupied workspace")
+-- Keypad 3/9 with Num Lock off send their own keysyms, not Page_Down/Page_Up.
+bind(mainMod .. " + KP_Next", hl.dsp.focus({ workspace = "e+1" }), "Next occupied workspace")
+bind(mainMod .. " + KP_Prior", hl.dsp.focus({ workspace = "e-1" }), "Previous occupied workspace")
 bind(mainMod .. " + N", hl.dsp.focus({ workspace = "empty" }), "Switch to nearest empty workspace")
 bind(mainMod .. " + S", hl.dsp.workspace.toggle_special("scratchpad"), "Toggle scratchpad")
-bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:scratchpad", follow = false }), "Send window to scratchpad")
+-- Super+Shift+S is taken by the laptop's PrtSc key (see Screenshots below).
+bind(mainMod .. " + ALT + S", hl.dsp.window.move({ workspace = "special:scratchpad", follow = false }), "Send window to scratchpad")
 section("Apps")
 bind(mainMod .. " + Return", launch("kitty --class dropdown-terminal"), "Open dropdown terminal")
 
@@ -349,6 +363,10 @@ bind("CTRL + Print", launch(scripts .. "/screenshot.sh area-copy"), "Copy select
 bind(mainMod .. " + Print", launch(scripts .. "/screenshot.sh annotate"), "Capture and annotate selected region")
 bind(mainMod .. " + CTRL + Print", launch(scripts .. "/screenshot.sh ocr"), "Copy text from selected region")
 bind(mainMod .. " + ALT + Print", launch(scripts .. "/screenshot.sh delay"), "Capture screen after five seconds")
+-- The built-in Lenovo keyboard's PrtSc key sends Super+Shift+S in firmware, not Print.
+bind(mainMod .. " + SHIFT + S", launch(scripts .. "/screenshot.sh area"), "Capture selected region (laptop PrtSc)")
+bind(mainMod .. " + CTRL + SHIFT + S", launch(scripts .. "/screenshot.sh area-copy"), "Copy selected region (laptop Ctrl+PrtSc)")
+bind(mainMod .. " + ALT + SHIFT + S", launch(scripts .. "/screenshot.sh window"), "Capture active window (laptop Alt+PrtSc)")
 bind(mainMod .. " + SHIFT + R", launch(scripts .. "/record-toggle.sh"), "Start or stop screen recording")
 bind(mainMod .. " + SHIFT + C", launch(scripts .. "/color-picker.sh"), "Pick color from screen")
 section("Notifications")

@@ -19,13 +19,15 @@ case "${1:-}" in
         mapfile -t packages < <(pacman -Qdtq 2>/dev/null || true)
         if ((${#packages[@]})); then sudo pacman -Rns "${packages[@]}"; else printf 'No orphaned packages.\n'; fi ;;
     *)
+        # Columns: action, detail, icon, flag; the flag is the last column.
         selection="$({
-            printf '󰏖  Install packages\t--install\n'
-            printf '󰆴  Remove packages\t--remove\n'
-            printf '󰚰  Update the system\t--update\n'
-            printf '󰃢  Remove orphaned packages\t--orphans\n'
-        } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Packages' -display-columns 1)" || exit 0
-        action="${selection#*$'\t'}"
+            printf 'Install packages\tSearch the repositories and pick several\t\U000f03d6\t--install\n'
+            printf 'Remove packages\tExplicitly installed packages and their dependencies\t\U000f01b4\t--remove\n'
+            printf 'Update the system\tRepositories and AUR, through yay\t\U000f06b0\t--update\n'
+            printf 'Remove orphaned packages\tDependencies nothing needs any more\t\U000f00e2\t--orphans\n'
+        } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Packages' \
+            -display-columns 1 -detail-column 2 -icon-column 3)" || exit 0
+        action="${selection##*$'\t'}"
         [[ -n "$action" && "$action" != "$selection" ]] || exit 0
         exec kitty --class dotfiles-packages --title 'Package manager' -e "$0" "$action" ;;
 esac

@@ -102,19 +102,30 @@ toggle_awake() {
 
 # --- value picker ----------------------------------------------------------
 
+index_of() { # index_of <value> <option...>: zero-based position, or 0
+    local value="$1" i=0 option; shift
+    for option in "$@"; do
+        [[ "$option" == "$value" ]] && { printf '%d' "$i"; return; }
+        i=$((i + 1))
+    done
+    printf '0'
+}
+
 pick_value() { # pick_value <name> <title> <current> <option seconds...>
     local name="$1" title="$2" current="$3"; shift 3
     local option marker selection
 
+    # Columns: duration, value. The current one is marked and starts selected.
     selection="$({
         for option in off "$@"; do
-            marker='  '
-            [[ "$option" == "$current" ]] && marker=' ●'
-            printf '%s %s\t%s\n' "$marker" "$(pretty "$option")" "$option"
+            marker=''
+            [[ "$option" == "$current" ]] && marker='● '
+            printf '%s%s\t%s\n' "$marker" "$(pretty "$option")" "$option"
         done
-    } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p "$title" -display-columns 1)" || return 0
+    } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p "$title" -display-columns 1 \
+        -selected-row "$(index_of "$current" off "$@")")" || return 0
 
-    option="${selection#*$'\t'}"
+    option="${selection##*$'\t'}"
     [[ -n "$option" && "$option" != "$selection" ]] || return 0
     printf '%s\n' "$option" >"$state_dir/$name"
     apply
@@ -130,15 +141,17 @@ while true; do
     awake_state=off
     awake_active && awake_state=on
 
+    # Columns: action, current setting, icon, section, id (the last column).
     selection="$({
-        printf '󰌾  %-18s\tlock-now\n' 'Lock now'
-        printf '󰅶  %-18s %s\tawake\n' 'Keep awake' "$awake_state"
-        printf '󰔛  %-18s %s\tlock\n' 'Lock after' "$(pretty "$lock")"
-        printf '󰡆  %-18s %s\tdpms\n' 'Screen off after' "$(pretty "$dpms")"
-        printf '󰤄  %-18s %s\tsuspend\n' 'Suspend after' "$(pretty "$suspend")"
-    } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Screen and lock' -display-columns 1)" || exit 0
+        printf 'Lock now\t\t\U000f033e\tNow\tlock-now\n'
+        printf 'Keep awake\t%s\t\U000f0176\tNow\tawake\n' "${awake_state^}"
+        printf 'Lock after\t%s\t\U000f051b\tTimeouts\tlock\n' "$(pretty "$lock")"
+        printf 'Screen off after\t%s\t\U000f0846\tTimeouts\tdpms\n' "$(pretty "$dpms")"
+        printf 'Suspend after\t%s\t\U000f0904\tTimeouts\tsuspend\n' "$(pretty "$suspend")"
+    } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Screen and lock' \
+        -display-columns 1 -detail-column 2 -icon-column 3 -section-column 4)" || exit 0
 
-    choice="${selection#*$'\t'}"
+    choice="${selection##*$'\t'}"
     [[ -n "$choice" && "$choice" != "$selection" ]] || exit 0
 
     case "$choice" in

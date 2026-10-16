@@ -754,6 +754,17 @@ configure_services() {
         fi
     fi
 
+    # Vicinae starts with the graphical session, so it is enabled but not
+    # started here. Its script commands mirror the desktop menu (menu.json).
+    if systemctl --user list-unit-files vicinae.service >/dev/null 2>&1; then
+        if ! systemctl --user enable vicinae.service; then
+            warning "The Vicinae launcher service could not be enabled."
+            ((INSTALL_FAILURES += 1))
+        fi
+        "$CONFIG_DIR/vicinae/menu-commands.py" >/dev/null 2>&1 \
+            || warning "Vicinae's desktop menu commands could not be generated."
+    fi
+
     local unit
     for unit in firewalld.service cups.service; do
         systemctl list-unit-files "$unit" >/dev/null 2>&1 || continue
@@ -771,6 +782,7 @@ configure_login() {
     if [[ -d "$theme_dir" ]]; then
         sudo install -Dm644 "$REPO_DIR/system/sddm/90-silent.conf" /etc/sddm.conf.d/90-silent.conf
         sudo install -Dm644 "$REPO_DIR/system/sddm/silent-theme-config.hook" /etc/pacman.d/hooks/sddm-silent-theme-config.hook
+        sudo install -Dm644 "$REPO_DIR/system/sddm/30-touchpad.conf" /etc/X11/xorg.conf.d/30-touchpad.conf
         # Same edit the hook repeats after each upgrade of the theme package.
         sudo sed -i -E -e 's|^ConfigFile=|# ConfigFile=|' \
             -e 's|^# ConfigFile=configs/nord.conf$|ConfigFile=configs/nord.conf|' \

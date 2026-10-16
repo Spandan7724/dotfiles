@@ -10,11 +10,23 @@ data="$(python3 -c 'import os, picker; print(os.path.join(os.path.dirname(picker
 }
 
 # Lines are "<char> <name> <small>(keywords)</small>"; turn them into
-# "char<TAB>name<TAB>keywords" for menu-select.
-selection="$(cat "$data"/emojis_*.csv "$data"/arrows.csv "$data"/mathematical_operators.csv 2>/dev/null |
-    sed -E 's#^([^ ]+) (.*) <small>\((.*)\)</small>$#\1\t\2\t\3#; t; s#^([^ ]+) (.*)$#\1\t\2\t#' |
+# "char<TAB>name<TAB>keywords<TAB>group" for menu-select, the group coming from
+# the file name (emojis_food_drink.csv is "Food & drink").
+selection="$(for file in "$data"/emojis_*.csv "$data"/arrows.csv "$data"/mathematical_operators.csv; do
+        [[ -r "$file" ]] || continue
+        group="$(basename "$file" .csv)"
+        group="${group#emojis_}"
+        group="${group//_/ }"
+        [[ "$group" == "mathematical operators" ]] && group="maths"
+        # "food drink" reads as "Food & drink". Bash 5.2 treats "&" in ${x/a/b}
+        # as the matched text, so the name is put together by hand.
+        [[ "$group" == *" "* ]] && group="${group%% *} & ${group#* }"
+        group="${group^}"
+        sed -E 's#^([^ ]+) (.*) <small>\((.*)\)</small>$#\1\t\2\t\3#; t; s#^([^ ]+) (.*)$#\1\t\2\t#' "$file" |
+            awk -v group="$group" '{ print $0 "\t" group }'
+    done |
     "$HOME/.config/hypr/scripts/menu-select" -p 'Emoji and symbols' -placeholder 'Search by name or keyword…' \
-        -icon-column 1 -display-columns 2,3 -no-custom -lines 9)" || exit 0
+        -icon-column 1 -display-columns 2 -detail-column 3 -section-column 4 -no-custom -lines 9)" || exit 0
 
 char="${selection%%$'\t'*}"
 [[ -n "$char" ]] || exit 0

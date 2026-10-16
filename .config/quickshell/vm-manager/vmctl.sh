@@ -34,6 +34,13 @@ die() {
     exit 1
 }
 
+# Run a virsh action, turning any failure into a notification instead of
+# losing it (the window launches us detached, so stderr goes nowhere).
+act() {
+    local err
+    err="$(v "$@" 2>&1 >/dev/null)" || die "${err//error: /}"
+}
+
 valid_name() { [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$ ]]; }
 
 # --- queries ---------------------------------------------------------------
@@ -331,10 +338,10 @@ case "$action" in
     list) cmd_list ;;
     catalog) cmd_catalog "$@" ;;
     isos) cmd_isos ;;
-    start) v start "$1" >/dev/null && open_console "$1" ;;
-    shutdown) v shutdown "$1" >/dev/null ;;
-    reboot) v reboot "$1" >/dev/null ;;
-    destroy) v destroy "$1" >/dev/null ;;
+    start) act start "$1" && open_console "$1" ;;
+    shutdown) act shutdown "$1" ;;
+    reboot) act reboot "$1" ;;
+    destroy) act destroy "$1" ;;
     console) open_console "$1" ;;
     details) setsid -f virt-manager --connect "$uri" --show-domain-editor "$1" >/dev/null 2>&1 ;;
     manager) setsid -f virt-manager --connect "$uri" >/dev/null 2>&1 ;;

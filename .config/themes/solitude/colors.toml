@@ -3,7 +3,7 @@ mode = "dark"
 
 accent = "#798186"
 selection = "#343d41"
-muted = "#4b4e55"
+muted = "#8a9095"
 
 background = "#101315"
 dark_background = "#0c0e10"
@@ -20,21 +20,28 @@ hyprland_inactive_border = "rgb(1e1e1e)"
 active_border_color = "#a8adb0"
 active_tab_background = "#798186"
 
-red = "#565d60"
-yellow = "#d9dbdc"
-green = "#9fa5a9"
-cyan = "#707070"
-blue = "#798186"
-magenta = "#aeaeae"
+red = "#d9705f"
+yellow = "#d6b46e"
+green = "#93ad8a"
+cyan = "#73a8a6"
+blue = "#7fa1b8"
+magenta = "#b392b0"
 
-bright_red = "#de6145"
-bright_yellow = "#c9c2b4"
-bright_green = "#343d41"
-bright_cyan = "#707070"
-bright_blue = "#5d6367"
-bright_magenta = "#9a9a9a"
+bright_red = "#e88a78"
+bright_yellow = "#e3c58a"
+bright_green = "#a9c29f"
+bright_cyan = "#8dbfbc"
+bright_blue = "#97b5ca"
+bright_magenta = "#c6a8c3"
 
 orange = "#de6145"
+
+# Status colours for errors, warnings, and success (notifications, the bar,
+# the lock screen, menus, GTK and Qt apps). The desktop stays grey; terminals
+# get the muted hues above, picked to sit on the grey background.
+error = "#de6145"
+warning = "#d6b46e"
+success = "#93ad8a"
 
 [apps]
 helix = "ashen"

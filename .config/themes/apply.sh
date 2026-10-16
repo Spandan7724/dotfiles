@@ -18,6 +18,14 @@ ln -s "$theme" "$temporary_link"
 mv -Tf "$temporary_link" "$themes_root/current"
 
 mode="$(<"$theme_dir/mode")"
+
+# adw-gtk3 makes GTK 3 apps read the theme's colours (gtk-3.0/gtk.css); plain
+# Adwaita ignores most of them, so it is only the fallback.
+if [[ -d /usr/share/themes/adw-gtk3-dark || -d "$HOME/.local/share/themes/adw-gtk3-dark" ]]; then
+    gtk_dark=adw-gtk3-dark gtk_light=adw-gtk3
+else
+    gtk_dark=Adwaita-dark gtk_light=Adwaita
+fi
 set_gtk_setting() {
     local file="$1" key="$2" value="$3"
     mkdir -p "$(dirname "$file")"
@@ -32,21 +40,21 @@ set_gtk_setting() {
 if command -v gsettings >/dev/null 2>&1; then
     if [[ "$mode" == "dark" ]]; then
         gsettings set org.gnome.desktop.interface color-scheme prefer-dark 2>/dev/null || true
-        gsettings set org.gnome.desktop.interface gtk-theme Adwaita-dark 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface gtk-theme "$gtk_dark" 2>/dev/null || true
         gsettings set org.gnome.desktop.interface icon-theme Papirus-Dark 2>/dev/null || true
     else
         gsettings set org.gnome.desktop.interface color-scheme default 2>/dev/null || true
-        gsettings set org.gnome.desktop.interface gtk-theme Adwaita 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface gtk-theme "$gtk_light" 2>/dev/null || true
         gsettings set org.gnome.desktop.interface icon-theme Papirus 2>/dev/null || true
     fi
 fi
 
 if [[ "$mode" == dark ]]; then
-    gtk_theme=Adwaita-dark
+    gtk_theme="$gtk_dark"
     icon_theme=Papirus-Dark
     prefer_dark=1
 else
-    gtk_theme=Adwaita
+    gtk_theme="$gtk_light"
     icon_theme=Papirus
     prefer_dark=0
 fi
@@ -61,7 +69,7 @@ done
 wallpaper_state="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-wallpaper"
 if [[ -r "$wallpaper_state" ]]; then
     wallpaper="$(<"$wallpaper_state")"
-    [[ -f "$wallpaper" ]] && "$themes_root/wallpaper.sh" "$wallpaper" "$mode"
+    [[ -f "$wallpaper" ]] && DOTFILES_THEME_APPLY=1 "$themes_root/wallpaper.sh" "$wallpaper" "$mode"
 fi
 
 # Named themes ship a Quickshell palette (wallpaper.sh also restores it after
@@ -76,6 +84,9 @@ ln -sfn ../../themes/current/helix.toml "$config_root/helix/themes/dotfiles.toml
 ln -sfn ../../themes/current/btop.theme "$config_root/btop/themes/dotfiles.theme"
 
 # The rest reaches running applications. Every step is best effort.
+
+# Qt (qt6ct), fish, and cava.
+"$themes_root/reload-apps.sh"
 
 # Hyprland: hyprland.lua loads the theme's border colors on reload.
 hyprctl reload >/dev/null 2>&1 || true
@@ -104,4 +115,4 @@ if command -v emacsclient >/dev/null 2>&1 && timeout 2 emacsclient -a false -e t
 fi
 
 printf 'Applied theme: %s\n' "$theme"
-printf 'Thunar and btop windows that are already open pick the theme up when reopened.\n'
+printf 'GTK, Qt, Thunar, and btop windows that are already open pick the theme up when reopened.\n'

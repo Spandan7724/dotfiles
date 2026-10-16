@@ -56,6 +56,19 @@ fi
 
 git -C "$build_dir" fetch --depth 1 origin "$plugin_commit"
 git -C "$build_dir" checkout --detach "$plugin_commit"
+
+# Local fixes, e.g. labels cropped on HiDPI monitors. A patch that no longer
+# applies (fixed upstream, or the code moved) is skipped with a warning.
+for patch in "$HOME"/.config/hypr/patches/hyprexpo-*.patch; do
+    [[ -r "$patch" ]] || continue
+    if git -C "$build_dir" apply --check "$patch" 2>/dev/null; then
+        git -C "$build_dir" apply "$patch"
+        printf 'Applied %s\n' "${patch##*/}"
+    else
+        printf 'Warning: %s does not apply to %s; skipped.\n' "${patch##*/}" "$plugin_commit" >&2
+    fi
+done
+
 make -C "$build_dir" -j"$(nproc)" all
 install -Dm755 "$build_dir/hyprexpo.so" "$target"
 printf '%s\n' "$hyprland_commit" >"$metadata"

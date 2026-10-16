@@ -18,15 +18,7 @@ if [[ "${1:-}" == --set-shell ]]; then
     exit 0
 fi
 
-choose_installed() {
-    local prompt="$1"; shift
-    local program label choices=""
-    while (($# >= 2)); do
-        program="$1"; label="$2"; shift 2
-        command -v "$program" >/dev/null 2>&1 && choices+="$program\t$label"$'\n'
-    done
-    printf '%b' "$choices" | sed '/^$/d' | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p "$prompt" -display-columns 2
-}
+menu="$HOME/.config/hypr/scripts/menu-select"
 
 # Installed notes apps, as "desktop-id<TAB>Name" lines. Any launcher whose
 # name, description, keywords, or categories talk about notes, notebooks,
@@ -55,87 +47,159 @@ notes_apps() {
     done | awk -F '\t' '!seen[$1]++' | sort -t $'\t' -k2,2
 }
 
-set_mimes() {
-    local desktop="$1"; shift
-    local mime
-    for mime in "$@"; do xdg-mime default "$desktop" "$mime"; done
+# The choices for a category as "program<TAB>label<TAB>desktop<TAB>detail"
+# lines. The program is what gets stored; the desktop file (blank when there
+# is none) sets file associations and supplies the icon.
+choices() {
+    case "$1" in
+        terminal) printf '%s\t%s\t%s\t\n' kitty Kitty kitty.desktop foot Foot foot.desktop \
+            alacritty Alacritty Alacritty.desktop ghostty Ghostty com.mitchellh.ghostty.desktop \
+            wezterm WezTerm org.wezfurlong.wezterm.desktop ;;
+        shell) printf '%s\t%s\t\t\n' fish Fish zsh Zsh bash Bash ;;
+        browser) printf '%s\t%s\t%s\t\n' zen-browser 'Zen Browser' zen.desktop brave Brave brave-browser.desktop \
+            brave-browser Brave brave-browser.desktop firefox Firefox firefox.desktop \
+            chromium Chromium chromium.desktop google-chrome-stable Chrome google-chrome.desktop ;;
+        editor) printf '%s\t%s\t%s\t\n' nvim Neovim '' code 'Visual Studio Code' code.desktop \
+            zeditor Zed dev.zed.Zed.desktop hx Helix '' helix Helix '' vim Vim '' \
+            emacs Emacs emacs.desktop subl Sublime sublime_text.desktop ;;
+        file-manager) printf '%s\t%s\t%s\t\n' thunar Thunar thunar.desktop dolphin Dolphin org.kde.dolphin.desktop \
+            nautilus Files org.gnome.Nautilus.desktop nemo Nemo nemo.desktop ;;
+        notes)
+            printf 'doom\tDoom Emacs\temacs.desktop\tNew note in ~/notes\n'
+            printf 'nvim\tNeovim\tnvim.desktop\tNew note in ~/notes\n'
+            notes_apps | awk -F '\t' '{ print "app:" $1 "\t" $2 "\t" $1 ".desktop\t" }' ;;
+        agent) printf '%s\t%s\t\t\n' claude 'Claude Code' codex Codex opencode OpenCode amp Amp mu Mu ;;
+        pdf) printf '%s\t%s\t%s\t\n' zathura Zathura org.pwmt.zathura.desktop \
+            evince 'Document Viewer' org.gnome.Evince.desktop okular Okular org.kde.okular.desktop ;;
+        image) printf '%s\t%s\t%s\t\n' imv imv imv.desktop loupe Loupe org.gnome.Loupe.desktop \
+            ristretto Ristretto org.xfce.ristretto.desktop feh feh feh.desktop ;;
+        video) printf '%s\t%s\t%s\t\n' mpv mpv mpv.desktop vlc VLC vlc.desktop \
+            celluloid Celluloid io.github.celluloid_player.Celluloid.desktop ;;
+    esac
 }
 
-# The menu sizes itself to the row count. The hidden second column carries
-# the id that is matched on.
+installed() {
+    case "$1" in
+        doom) command -v emacsclient >/dev/null 2>&1 ;;
+        app:*) true ;;
+        *) command -v "$1" >/dev/null 2>&1 ;;
+    esac
+}
+
+# The MIME types a category's default opens.
+mimes() {
+    case "$1" in
+        browser) printf '%s\n' x-scheme-handler/http x-scheme-handler/https text/html ;;
+        editor) printf '%s\n' text/plain text/markdown application/json ;;
+        file-manager) printf '%s\n' inode/directory ;;
+        pdf) printf '%s\n' application/pdf ;;
+        image) printf '%s\n' image/jpeg image/png image/webp image/gif image/avif ;;
+        video) printf '%s\n' video/mp4 video/x-matroska video/webm video/quicktime ;;
+    esac
+}
+
+# The program currently chosen for a category, or nothing. Unset app
+# categories fall back to the same defaults as default-launcher.sh.
+current() {
+    local category="$1" desktop=""
+    case "$category" in
+        shell) basename "$(getent passwd "$USER" | cut -d: -f7)"; return ;;
+        terminal | browser | editor | file-manager | notes | agent)
+            if [[ -s "$state_dir/$category" ]]; then cat -- "$state_dir/$category"; return; fi
+            case "$category" in
+                terminal) printf 'kitty\n' ;; browser) printf 'zen-browser\n' ;; editor) printf 'nvim\n' ;;
+                file-manager) printf 'thunar\n' ;; notes) printf 'doom\n' ;;
+            esac
+            return ;;
+    esac
+    # File types: ask what opens the category's first MIME type.
+    desktop="$(xdg-mime query default "$(mimes "$category" | head -n 1)" 2>/dev/null || true)"
+    [[ -n "$desktop" ]] && choices "$category" | awk -F '\t' -v d="$desktop" '!found && $3 == d { print $1; found = 1 }'
+    return 0
+}
+
+field() { # field <category> <program> <column>
+    choices "$1" | awk -F '\t' -v p="$2" -v n="$3" '!found && $1 == p { print $n; found = 1 }'
+}
+
+set_mimes() {
+    local desktop="$1" mime
+    while read -r mime; do xdg-mime default "$desktop" "$mime"; done
+}
+
+# Pick a program for a category. Rows are "label, detail, icon, program"; the
+# current choice is marked and the program is read from the last column.
+choose() { # choose <category> <title>
+    local category="$1" title="$2" now
+    now="$(current "$category")"
+    choices "$category" | while IFS=$'\t' read -r program label desktop detail; do
+        installed "$program" || continue
+        local marker='' icon="${desktop%.desktop}"
+        [[ "$program" == "$now" ]] && marker='● '
+        # Shells and CLI agents have no desktop entry, so they get a glyph.
+        [[ -z "$icon" && "$category" == shell ]] && icon=$'\U000f018d'
+        [[ -z "$icon" && "$category" == agent ]] && icon=$'\U000f140b'
+        printf '%s%s\t%s\t%s\t%s\n' "$marker" "$label" "${detail:-$program}" "${icon:-$program}" "$program"
+    done | "$menu" -no-custom -p "$title" -display-columns 1 -detail-column 2 -icon-column 3 |
+        awk -F '\t' '{ print $NF }'
+}
+
+# Each category with what it is set to now. Rows are "label, current default,
+# icon, section, id"; the id is the last column.
 category="$({
-    printf '\U000f018d  Terminal\tterminal\n'
-    printf '\U000f07b7  Login shell\tshell\n'
-    printf '\U000f059f  Web browser\tbrowser\n'
-    printf '\U000f0a1e  Code and text editor\teditor\n'
-    printf '\U000f024b  File manager\tfile-manager\n'
-    printf '\U000f082e  Notes app\tnotes\n'
-    printf '\U000f140b  Coding agent\tagent\n'
-    printf '\U000f0226  PDF viewer\tpdf\n'
-    printf '\U000f02e9  Image viewer\timage\n'
-    printf '\U000f0439  Video player\tvideo\n'
-} | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Defaults' -display-columns 1)" || exit 0
-category="${category#*$'\t'}"
+    row() { # row <id> <icon> <label> <section>
+        local now label
+        now="$(current "$1")"
+        label="$(field "$1" "$now" 2)"
+        printf '%s\t%s\t%b\t%s\t%s\n' "$3" "${label:-${now:-Not set}}" "$2" "$4" "$1"
+    }
+    row terminal '\U000f018d' 'Terminal' 'Apps'
+    row shell '\U000f07b7' 'Login shell' 'Apps'
+    row browser '\U000f059f' 'Web browser' 'Apps'
+    row editor '\U000f0a1e' 'Code and text editor' 'Apps'
+    row file-manager '\U000f024b' 'File manager' 'Apps'
+    row notes '\U000f082e' 'Notes app' 'Apps'
+    row agent '\U000f140b' 'Coding agent' 'Apps'
+    row pdf '\U000f0226' 'PDF viewer' 'Files'
+    row image '\U000f02e9' 'Image viewer' 'Files'
+    row video '\U000f0439' 'Video player' 'Files'
+} | "$menu" -no-custom -p 'Defaults' -display-columns 1 -detail-column 2 -icon-column 3 -section-column 4)" || exit 0
+category="${category##*$'\t'}"
 
 case "$category" in
-    terminal)
-        selection="$(choose_installed 'Default terminal' kitty Kitty foot Foot alacritty Alacritty ghostty Ghostty wezterm WezTerm)"
-        program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0
-        printf '%s\n' "$program" >"$state_dir/terminal"
-        case "$program" in kitty) desktop=kitty.desktop ;; foot) desktop=foot.desktop ;; alacritty) desktop=Alacritty.desktop ;; ghostty) desktop=com.mitchellh.ghostty.desktop ;; wezterm) desktop=org.wezfurlong.wezterm.desktop ;; esac
-        printf '%s\n' "$desktop" >"${XDG_CONFIG_HOME:-$HOME/.config}/xdg-terminals.list" ;;
-    shell)
-        selection="$(choose_installed 'Login shell' fish Fish zsh Zsh bash Bash)"
-        program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0
-        exec kitty --class dotfiles-defaults --title 'Change login shell' -e "$0" --set-shell "$program" ;;
-    browser)
-        selection="$(choose_installed 'Default browser' zen-browser 'Zen Browser' brave Brave brave-browser Brave firefox Firefox chromium Chromium google-chrome-stable Chrome)"
-        program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0
-        printf '%s\n' "$program" >"$state_dir/browser"
-        case "$program" in zen-browser) desktop=zen.desktop ;; brave|brave-browser) desktop=brave-browser.desktop ;; firefox) desktop=firefox.desktop ;; chromium) desktop=chromium.desktop ;; google-chrome-stable) desktop=google-chrome.desktop ;; esac
-        xdg-settings set default-web-browser "$desktop" || true
-        set_mimes "$desktop" x-scheme-handler/http x-scheme-handler/https text/html ;;
-    editor)
-        selection="$(choose_installed 'Default editor' nvim Neovim code 'Visual Studio Code' zeditor Zed hx Helix helix Helix vim Vim emacs Emacs subl Sublime)"
-        program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0
-        printf '%s\n' "$program" >"$state_dir/editor"
-        case "$program" in code) desktop=code.desktop ;; zeditor) desktop=dev.zed.Zed.desktop ;; emacs) desktop=emacs.desktop ;; subl) desktop=sublime_text.desktop ;; *) desktop= ;; esac
-        [[ -n "$desktop" ]] && set_mimes "$desktop" text/plain text/markdown application/json ;;
-    file-manager)
-        selection="$(choose_installed 'Default file manager' thunar Thunar dolphin Dolphin nautilus Files nemo Nemo)"
-        program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0
-        printf '%s\n' "$program" >"$state_dir/file-manager"
-        case "$program" in thunar) desktop=thunar.desktop ;; dolphin) desktop=org.kde.dolphin.desktop ;; nautilus) desktop=org.gnome.Nautilus.desktop ;; nemo) desktop=nemo.desktop ;; esac
-        set_mimes "$desktop" inode/directory ;;
-    notes)
-        # The hidden column is the stored value: doom, nvim, or app:<desktop-id>.
-        selection="$({
-            command -v emacsclient >/dev/null 2>&1 && printf 'doom\tDoom Emacs (new note in ~/notes)\n'
-            command -v nvim >/dev/null 2>&1 && printf 'nvim\tNeovim (new note in ~/notes)\n'
-            notes_apps | sed 's/^/app:/'
-        } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Notes app' -display-columns 2)" || exit 0
-        program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0
-        printf '%s\n' "$program" >"$state_dir/notes" ;;
-    agent)
-        selection="$(choose_installed 'Coding agent' claude 'Claude Code' codex Codex opencode OpenCode amp Amp)"
-        program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0
-        printf '%s\n' "$program" >"$state_dir/agent" ;;
-    pdf)
-        selection="$(choose_installed 'Default PDF viewer' zathura Zathura evince 'Document Viewer' okular Okular)"
-        program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0
-        case "$program" in zathura) desktop=org.pwmt.zathura.desktop ;; evince) desktop=org.gnome.Evince.desktop ;; okular) desktop=org.kde.okular.desktop ;; esac
-        set_mimes "$desktop" application/pdf ;;
-    image)
-        selection="$(choose_installed 'Default image viewer' imv imv loupe Loupe ristretto Ristretto feh feh)"
-        program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0
-        case "$program" in imv) desktop=imv.desktop ;; loupe) desktop=org.gnome.Loupe.desktop ;; ristretto) desktop=org.xfce.ristretto.desktop ;; feh) desktop=feh.desktop ;; esac
-        set_mimes "$desktop" image/jpeg image/png image/webp image/gif image/avif ;;
-    video)
-        selection="$(choose_installed 'Default video player' mpv mpv vlc VLC celluloid Celluloid)"
-        program="${selection%%$'\t'*}"; [[ -n "$program" ]] || exit 0
-        case "$program" in mpv) desktop=mpv.desktop ;; vlc) desktop=vlc.desktop ;; celluloid) desktop=io.github.celluloid_player.Celluloid.desktop ;; esac
-        set_mimes "$desktop" video/mp4 video/x-matroska video/webm video/quicktime ;;
+    terminal) title='Default terminal' ;;
+    shell) title='Login shell' ;;
+    browser) title='Default browser' ;;
+    editor) title='Default editor' ;;
+    file-manager) title='Default file manager' ;;
+    notes) title='Notes app' ;;
+    agent) title='Coding agent' ;;
+    pdf) title='Default PDF viewer' ;;
+    image) title='Default image viewer' ;;
+    video) title='Default video player' ;;
     *) exit 0 ;;
 esac
+program="$(choose "$category" "$title")" || exit 0
+[[ -n "$program" ]] || exit 0
+desktop="$(field "$category" "$program" 3)"
 
-notify-send 'Defaults' "${selection#*$'\t'} is now the default."
+case "$category" in
+    shell)
+        exec kitty --class dotfiles-defaults --title 'Change login shell' -e "$0" --set-shell "$program" ;;
+    terminal)
+        printf '%s\n' "$program" >"$state_dir/terminal"
+        printf '%s\n' "$desktop" >"${XDG_CONFIG_HOME:-$HOME/.config}/xdg-terminals.list" ;;
+    browser)
+        printf '%s\n' "$program" >"$state_dir/browser"
+        xdg-settings set default-web-browser "$desktop" || true
+        mimes browser | set_mimes "$desktop" ;;
+    editor | file-manager)
+        printf '%s\n' "$program" >"$state_dir/$category"
+        [[ -n "$desktop" ]] && mimes "$category" | set_mimes "$desktop" ;;
+    notes | agent)
+        printf '%s\n' "$program" >"$state_dir/$category" ;;
+    pdf | image | video)
+        mimes "$category" | set_mimes "$desktop" ;;
+esac
+
+notify-send 'Defaults' "$(field "$category" "$program" 2) is now the default."

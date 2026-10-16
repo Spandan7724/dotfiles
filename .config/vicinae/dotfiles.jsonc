@@ -1,0 +1,19 @@
+// Dotfiles defaults for Vicinae, imported by settings.json. Vicinae never
+// rewrites imported files; settings.json (written by the GUI) still wins.
+{
+	// themes/reload-apps.sh installs the current dotfiles theme as "dotfiles".
+	"theme": {
+		"light": { "name": "dotfiles" },
+		"dark": { "name": "dotfiles" }
+	},
+
+	// Start from the root search every time, like Spotlight.
+	"pop_to_root_on_close": true,
+
+	"launcher_window": {
+		// Translucent like the rofi menus; Hyprland blurs behind it (rules.lua).
+		"opacity": 0.95,
+		// Matches the rofi cards, which track Hyprland's rounding.
+		"rounding": 12
+	}
+}

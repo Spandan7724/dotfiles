@@ -30,6 +30,9 @@ zen-browser-bin
 brave-bin
 google-chrome
 
+# Launcher (Alt+Space); its pickers mirror the desktop menu
+vicinae-bin
+
 # Wallpaper and screenshots
 awww
 matugen

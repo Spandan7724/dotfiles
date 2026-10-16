@@ -137,6 +137,16 @@ function filter(categories, query) {
 }
 
 // Masonry: place each category in the currently shortest column.
+// Rough height of one category, for balancing the columns: a header, then a
+// row per shortcut. Rows with several key combos usually drop the keys to a
+// second line.
+function categoryHeight(category) {
+    var h = 52
+    for (var i = 0; i < category.rows.length; i++)
+        h += category.rows[i].combos.length > 1 ? 56 : 32
+    return h
+}
+
 function columns(categories, count) {
     var cols = [], heights = []
     for (var i = 0; i < count; i++) { cols.push([]); heights.push(0) }
@@ -144,7 +154,7 @@ function columns(categories, count) {
         var shortest = 0
         for (var c = 1; c < count; c++) if (heights[c] < heights[shortest]) shortest = c
         cols[shortest].push(categories[j])
-        heights[shortest] += 52 + categories[j].rows.length * 32
+        heights[shortest] += categoryHeight(categories[j])
     }
     return cols
 }

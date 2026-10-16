@@ -1,0 +1,3 @@
+/* GTK 4 and libadwaita apps follow the desktop theme: themes/apply.sh points
+ * themes/current at the active theme, whose gtk4.css sets the colours. */
+@import url("../themes/current/gtk4.css");

@@ -1,9 +1,14 @@
+//@ pragma IconTheme Papirus-Dark
 // Wi-Fi, Bluetooth, Display, and Media pop-ups for the top bar, plus the
 // full-screen session screen and keyboard cheatsheet, modelled on Omarchy's and end-4's shells. One
 // daemon serves them all; hypr/scripts/panel.sh starts it on demand and
 // toggles one:
 //
 //   qs -c panels ipc call panels toggle wifi|bluetooth|display|media|session|cheatsheet
+//
+// Icons come from Papirus, the theme the rest of the desktop uses (themes/
+// apply.sh), so menus can show file-type icons and not just app icons. Pragmas
+// are read at launch: restart the daemon after changing it.
 
 import Quickshell
 import Quickshell.Io

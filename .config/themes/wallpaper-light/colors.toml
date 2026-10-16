@@ -1,0 +1,22 @@
+mode = "light"
+
+# The wallpaper's palette in colors.toml form, written by Matugen. wallpaper.sh
+# adds the mode and copies it into the active wallpaper theme, where
+# generate.py --extras turns it into the GTK, Qt, fish, fzf, zathura, and cava
+# colours.
+background = "#f5fafd"
+lighter_background = "#e4e9ec"
+selection = "#cfe6f1"
+foreground = "#171c1f"
+muted = "#40484c"
+accent = "#0a6780"
+
+red = "#8e4956"
+orange = "#904b40"
+yellow = "#725c0c"
+green = "#216a4d"
+cyan = "#006875"
+blue = "#2a638a"
+magenta = "#64558f"
+
+error = "#ba1a1a"

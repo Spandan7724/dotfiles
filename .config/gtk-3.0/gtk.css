@@ -1,7 +1,10 @@
-/* Thunar follows the desktop theme. Matugen rewrites thunar-colors.css from
- * the wallpaper; named themes (Super+Shift+T) override it with their own
- * thunar.css. Every rule is scoped to Thunar's window so other GTK 3
- * applications keep plain Adwaita. */
+/* GTK 3 apps follow the desktop theme. gtk3.css sets libadwaita's named
+ * colours, which the adw-gtk3 theme reads, so every app picks them up.
+ *
+ * Thunar has its own rules on top: Matugen rewrites thunar-colors.css from the
+ * wallpaper, and named themes (Super+Shift+T) override it with their own
+ * thunar.css. Those rules are scoped to Thunar's window. */
+@import url("../themes/current/gtk3.css");
 @import url("thunar-colors.css");
 @import url("../themes/current/thunar.css");
 

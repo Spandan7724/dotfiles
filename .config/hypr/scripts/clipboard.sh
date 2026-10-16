@@ -7,9 +7,21 @@ set -euo pipefail
 # cliphist emits "<id>\t<preview>" with the preview capped near 100 characters.
 # The menu is wide enough to show all of it, so a search never lands on a row
 # whose matching words are cut off. Only the preview is displayed; the id rides
-# along in the hidden first column and is what cliphist decodes.
-selection="$(cliphist list |
-    "$HOME/.config/hypr/scripts/menu-select" -p 'Clipboard' -placeholder 'Search clipboard history…' -display-columns 2 -width 980 -lines 12)" || exit 0
+# along in the hidden first column and is what cliphist decodes. A third
+# column adds a glyph for the kind of entry: image, link, code, or text.
+selection="$(cliphist list | awk -F '\t' \
+    -v image="$(printf '\U000f02e9')" -v link="$(printf '\U000f0337')" \
+    -v code="$(printf '\U000f0169')" -v text="$(printf '\U000f0219')" '
+    {
+        preview = substr($0, index($0, "\t") + 1)
+        if (preview ~ /^\[\[ binary data /) icon = image
+        else if (preview ~ /^[a-z][a-z0-9+.-]*:\/\/[^ ]+$/) icon = link
+        else if (preview ~ /[{};]$|^(\$ |#!|import |def |function |const |let )/) icon = code
+        else icon = text
+        print $0 "\t" icon
+    }' |
+    "$HOME/.config/hypr/scripts/menu-select" -p 'Clipboard' -placeholder 'Search clipboard history…' \
+        -display-columns 2 -icon-column 3 -width 980 -lines 12)" || exit 0
 
 id="${selection%%$'\t'*}"
 [[ -n "$id" && "$id" != "$selection" ]] || exit 0

@@ -12,6 +12,7 @@ wallpaper-derived colors.
 
 - Default browser: Zen Browser
 - Other browsers: Brave, Google Chrome
+- Launcher: Vicinae (Alt+Space), with the desktop menu's tools as script commands
 - Terminal: Kitty
 - File manager: Thunar
 - Graphical editor: Zed
@@ -257,6 +258,7 @@ generated monolith:
 | Neovim (NvChad) | `nvim.lua` names a base46 theme, `base46.lua` for custom ones | not recolored |
 | Doom Emacs | `doom.el` sets `doom-theme`, `doom-palette.el` for custom ones | not recolored |
 | Helix, btop | `helix.toml`, `btop.theme` linked as the `dotfiles` theme | not recolored |
+| Vicinae | `vicinae.toml` installed as its `dotfiles` theme | `vicinae.toml` from the wallpaper palette |
 
 The newer app files come from each profile's `colors.toml` (Omarchy's palette
 format). Its `[apps]` table names a matching built-in theme, such as NvChad's

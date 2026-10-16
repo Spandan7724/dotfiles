@@ -37,9 +37,12 @@ PanelWindow {
     readonly property var shownCategories: Model.filter(categories, search.text)
     readonly property int rowCount: shownCategories.reduce((n, c) => n + c.rows.length, 0)
 
-    readonly property int columnWidth: 420
+    readonly property int minColumnWidth: 440
     readonly property int columnGap: 28
-    readonly property int columnCount: Math.max(1, Math.floor((card.width - 56 + columnGap) / (columnWidth + columnGap)))
+    // As many columns as fit across, stretched to share the card's width.
+    // Whatever does not fit on screen scrolls vertically.
+    readonly property int columnCount: Math.max(1, Math.floor((card.width - 56 + columnGap) / (minColumnWidth + columnGap)))
+    readonly property int columnWidth: Math.floor((card.width - 56 - (columnCount - 1) * columnGap) / columnCount)
 
     onShownChanged: {
         if (!shown)
@@ -77,8 +80,8 @@ PanelWindow {
         id: card
 
         anchors.centerIn: parent
-        width: Math.min(parent.width - 80, 1400)
-        height: Math.min(parent.height - 80, 900)
+        width: Math.min(parent.width - 48, 1800)
+        height: parent.height - 48
         radius: 20
         color: Theme.background
         border.width: 1
@@ -256,7 +259,7 @@ PanelWindow {
                                         Text {
                                             text: category.modelData.name
                                             color: Theme.foreground
-                                            font.pixelSize: 14
+                                            font.pixelSize: 15
                                             font.weight: Font.DemiBold
                                         }
 
@@ -275,24 +278,28 @@ PanelWindow {
                                             id: row
 
                                             required property var modelData
+                                            // Keys too wide to share the line
+                                            // with the text move under it.
+                                            readonly property bool stacked: combos.implicitWidth > root.columnWidth - 170
 
                                             width: root.columnWidth
-                                            implicitHeight: 30
+                                            implicitHeight: stacked ? label.implicitHeight + combos.implicitHeight + 16
+                                                                    : Math.max(30, label.implicitHeight + 12)
                                             radius: 7
                                             color: rowHover.hovered ? Theme.alpha(Theme.foreground, 0.05) : "transparent"
 
                                             HoverHandler { id: rowHover }
 
                                             Text {
-                                                anchors.left: parent.left
-                                                anchors.leftMargin: 6
-                                                anchors.right: combos.left
-                                                anchors.rightMargin: 12
-                                                anchors.verticalCenter: parent.verticalCenter
+                                                id: label
+
+                                                x: 6
+                                                y: row.stacked ? 6 : Math.round((row.height - height) / 2)
+                                                width: row.stacked ? row.width - 12 : row.width - combos.implicitWidth - 30
                                                 text: row.modelData.text
                                                 color: rowHover.hovered ? Theme.foreground : Theme.alpha(Theme.foreground, 0.85)
-                                                font.pixelSize: 12
-                                                elide: Text.ElideRight
+                                                font.pixelSize: 13
+                                                wrapMode: Text.Wrap
                                             }
 
                                             Row {
@@ -300,7 +307,7 @@ PanelWindow {
 
                                                 anchors.right: parent.right
                                                 anchors.rightMargin: 6
-                                                anchors.verticalCenter: parent.verticalCenter
+                                                y: row.stacked ? label.y + label.height + 4 : Math.round((row.height - height) / 2)
                                                 spacing: 8
 
                                                 Repeater {
@@ -318,7 +325,7 @@ PanelWindow {
                                                             rightPadding: 5
                                                             text: "or"
                                                             color: Theme.muted
-                                                            font.pixelSize: 10
+                                                            font.pixelSize: 11
                                                         }
 
                                                         Repeater {
@@ -327,7 +334,7 @@ PanelWindow {
                                                             Keycap {
                                                                 required property string modelData
                                                                 text: modelData
-                                                                fontSize: 10
+                                                                fontSize: 11
                                                             }
                                                         }
                                                     }

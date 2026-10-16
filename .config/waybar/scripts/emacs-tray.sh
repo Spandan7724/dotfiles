@@ -41,11 +41,12 @@ case "${1:-status}" in
     menu)
         running || exit 0
         count="$(unsaved)"
-        stop_label="Stop Emacs"
-        ((count > 0)) && stop_label="Save $count unsaved file(s) and stop Emacs"
-        choice="$(printf '󰏌  New window\topen\n󰓛  %s\tstop\n' "$stop_label" |
-            "$HOME/.config/hypr/scripts/menu-select" -p 'Emacs' -display-columns 1 -no-custom)" || exit 0
-        case "${choice#*$'\t'}" in
+        stop_detail="The server shuts down"
+        ((count > 0)) && stop_detail="Saves $count unsaved file(s) first"
+        choice="$(printf 'New window\tOpen another Emacs frame\t\U000f03cc\topen\nStop Emacs\t%s\t\U000f04db\tstop\n' "$stop_detail" |
+            "$HOME/.config/hypr/scripts/menu-select" -p 'Emacs' -no-custom \
+                -display-columns 1 -detail-column 2 -icon-column 3)" || exit 0
+        case "${choice##*$'\t'}" in
             open) exec emacsclient -c -n -a '' ;;
             stop) emacsclient -e '(progn (save-some-buffers t) (kill-emacs))' >/dev/null 2>&1 ;;
         esac

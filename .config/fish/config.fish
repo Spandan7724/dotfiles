@@ -13,3 +13,6 @@ end
 test -d ~/.config/emacs/bin; and fish_add_path --path ~/.config/emacs/bin
 set --export BUN_INSTALL "$HOME/.bun"
 test -d $BUN_INSTALL/bin; and fish_add_path --path $BUN_INSTALL/bin
+
+# opencode
+fish_add_path /home/spandan/.opencode/bin

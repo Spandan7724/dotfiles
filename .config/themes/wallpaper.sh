@@ -54,6 +54,20 @@ if ! matugen image "$wallpaper" -m "$mode"; then
     exit 0
 fi
 
+# Wallpaper themes have no hand-made palette: Matugen's palette.toml becomes
+# their colors.toml, and generate.py --extras turns it into the GTK, Qt, fish,
+# fzf, zathura, and cava colours. apply.sh reloads those apps itself.
+current_theme="$(basename "$(readlink "$themes_root/current" 2>/dev/null)")"
+palette="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-wallpaper-palette.toml"
+if [[ "$current_theme" == wallpaper-* && -r "$palette" ]]; then
+    { printf 'mode = "%s"\n\n' "$mode"; cat -- "$palette"; } >"$themes_root/current/colors.toml"
+    if python3 "$themes_root/generate.py" "$current_theme" --extras >/dev/null; then
+        [[ -n "${DOTFILES_THEME_APPLY:-}" ]] || "$themes_root/reload-apps.sh"
+    else
+        printf 'Warning: could not generate the extra app colours for %s\n' "$current_theme" >&2
+    fi
+fi
+
 # Quickshell watches theme.json itself. These applications need an explicit
 # reload after Matugen rewrites their generated color fragments. Hyprlock and
 # Wlogout read their configuration at launch, so they need no signal here.

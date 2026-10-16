@@ -7,7 +7,17 @@
 #   -placeholder TEXT     hint text in the empty search box
 #   -display-columns N    show only these tab-separated columns (e.g. 2 or 1,3);
 #                         the whole line is still what gets printed
-#   -icon-column N        show this column in the icon slot (emoji, glyphs)
+#   -icon-column N        show this column in the icon slot: an emoji or glyph,
+#                         an icon theme name (kitty, firefox), or an image path
+#   -detail-column N      show this column as the dimmer second line; without
+#                         it, three or more spaces split label from detail
+#   -section-column N     group rows under a header whenever this column
+#                         changes (headers hide while searching)
+#   -swatch-column N      show this column's hex colours (space separated)
+#                         as a row of dots at the right of the row
+#   -a ROWS               mark rows as the current choice, rofi style: 0,2,4-6
+#                         (a line starting with "●" is marked as well)
+#   -selected-row N       start with the cursor on row N (zero-based)
 #   -no-custom            only listed choices; otherwise Shift+Enter, or Enter
 #                         when nothing matches, returns the typed text
 #   -filter TEXT          start with this search text
@@ -20,6 +30,7 @@
 set -uo pipefail
 
 prompt="" message="" placeholder="" columns="" icon_column=0 custom=true filter="" width=0 lines=10
+detail_column=0 section_column=0 swatch_column=0 active="" selected_row=0
 while (($#)); do
     case "$1" in
         -p) prompt="$2"; shift ;;
@@ -27,11 +38,16 @@ while (($#)); do
         -placeholder) placeholder="$2"; shift ;;
         -display-columns) columns="$2"; shift ;;
         -icon-column) icon_column="$2"; shift ;;
+        -detail-column) detail_column="$2"; shift ;;
+        -section-column) section_column="$2"; shift ;;
+        -swatch-column) swatch_column="$2"; shift ;;
+        -a) active="$2"; shift ;;
+        -selected-row) selected_row="$2"; shift ;;
         -no-custom) custom=false ;;
         -filter) filter="$2"; shift ;;
         -width) width="$2"; shift ;;
         -lines) lines="$2"; shift ;;
-        -theme | -theme-str | -sep | -eh | -selected-row) shift ;;
+        -theme | -theme-str | -sep | -eh) shift ;;
         *) ;;
     esac
     shift
@@ -55,10 +71,14 @@ jq -n \
     --arg filter "$filter" --arg columns "$columns" \
     --argjson custom "$custom" --argjson inputOnly "$input_only" \
     --argjson width "$width" --argjson maxRows "$lines" --argjson iconColumn "$icon_column" \
+    --argjson detailColumn "$detail_column" --argjson sectionColumn "$section_column" \
+    --argjson swatchColumn "$swatch_column" \
+    --arg active "$active" --argjson selectedRow "$selected_row" \
     --arg lines "$dir/lines" --arg result "$dir/result" --arg done "$dir/done" \
     '{prompt: $prompt, message: $message, placeholder: $placeholder, filter: $filter,
       displayColumns: ($columns | split(",") | map(select(length > 0) | tonumber)),
-      iconColumn: $iconColumn, allowCustom: $custom, inputOnly: $inputOnly, width: $width, maxRows: $maxRows,
+      iconColumn: $iconColumn, detailColumn: $detailColumn, sectionColumn: $sectionColumn, swatchColumn: $swatchColumn,
+      active: $active, selectedRow: $selectedRow, allowCustom: $custom, inputOnly: $inputOnly, width: $width, maxRows: $maxRows,
       lines: $lines, result: $result, done: $done}' >"$dir/request.json"
 
 if ! qs -c panels ipc call panels select "$dir/request.json" >/dev/null 2>&1; then

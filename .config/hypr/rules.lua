@@ -125,3 +125,12 @@ hl.window_rule({
     match = { class = "^(mpv|zen|zen-browser|Brave-browser|brave-browser)$" },
     idle_inhibit = "fullscreen",
 })
+
+-- Vicinae launcher (Alt+Space). It animates itself, so Hyprland's layer
+-- animation is turned off.
+hl.layer_rule({
+    match = { namespace = "vicinae" },
+    blur = true,
+    ignore_alpha = 0,
+    no_anim = true,
+})
