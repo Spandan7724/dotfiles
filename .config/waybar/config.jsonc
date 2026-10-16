@@ -400,7 +400,7 @@
             "children-class": "drawer-child",
             "transition-left-to-right": false
         },
-        "modules": ["custom/tray", "network", "bluetooth", "custom/emacs", "tray"]
+        "modules": ["custom/tray", "network", "bluetooth", "custom/emacs", "custom/music", "tray"]
     },
 
     "custom/tray": {
@@ -418,6 +418,14 @@
         "interval": 60,
         "on-click": "~/.config/waybar/scripts/emacs-tray.sh open",
         "on-click-right": "~/.config/waybar/scripts/emacs-tray.sh menu"
+    },
+
+    // Music players running in the Win+H scratchpad, including ncspot.
+    "custom/music": {
+        "exec": "~/.config/waybar/scripts/music-tray.sh status",
+        "return-type": "json",
+        "interval": 3,
+        "on-click": "~/.config/waybar/scripts/music-tray.sh toggle"
     },
 
     "tray": {

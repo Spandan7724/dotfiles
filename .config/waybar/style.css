@@ -42,6 +42,7 @@ window#waybar {
 #custom-launcher,
 #custom-search,
 #custom-tray,
+#custom-music,
 #custom-settings,
 #custom-power,
 #custom-system,
@@ -164,6 +165,7 @@ window#waybar {
 
 #network,
 #custom-emacs,
+#custom-music,
 #custom-display,
 #custom-tray,
 #custom-system,
@@ -227,6 +229,7 @@ window#waybar {
 #custom-launcher:hover,
 #custom-search:hover,
 #custom-tray:hover,
+#custom-music:hover,
 #custom-settings:hover,
 #custom-power:hover,
 #custom-system:hover,

@@ -61,6 +61,8 @@ libpulse
 sof-firmware
 pavucontrol
 playerctl
+ncspot
+spotify-launcher
 libqalculate
 
 # Terminal and file manager

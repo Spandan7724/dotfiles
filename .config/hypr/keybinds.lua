@@ -266,8 +266,11 @@ bind(mainMod .. " + N", hl.dsp.focus({ workspace = "empty" }), "Switch to neares
 bind(mainMod .. " + S", hl.dsp.workspace.toggle_special("scratchpad"), "Toggle scratchpad")
 -- Super+Shift+S is taken by the laptop's PrtSc key (see Screenshots below).
 bind(mainMod .. " + ALT + S", hl.dsp.window.move({ workspace = "special:scratchpad", follow = false }), "Send window to scratchpad")
+bind(mainMod .. " + I", hl.dsp.workspace.toggle_special("scratchpad2"), "Toggle second scratchpad")
+bind(mainMod .. " + ALT + I", hl.dsp.window.move({ workspace = "special:scratchpad2", follow = false }), "Send window to second scratchpad")
 section("Apps")
 bind(mainMod .. " + Return", launch("kitty --class dropdown-terminal"), "Open dropdown terminal")
+bind(mainMod .. " + H", hl.dsp.workspace.toggle_special("ncspot"), "Toggle music player scratchpad")
 
 -- Monitor navigation. Relative monitor selectors follow monitor order.
 section("Monitors")
@@ -302,6 +305,7 @@ bind(mainMod .. " + CTRL + mouse_up", zoom(0.2), "Zoom compositor in", { repeati
 local terminal_classes = {
     ["kitty"] = true,
     ["dropdown-terminal"] = true,
+    ["dotfiles-ncspot"] = true,
     ["dotfiles-btop"] = true,
     ["Alacritty"] = true,
     ["foot"] = true,

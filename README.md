@@ -143,6 +143,8 @@ installation:
 2. Run `:MasonInstallAll`.
 3. Run `:TSInstallAll`.
 
+The file explorer shows Git-ignored files by default.
+
 ## Doom Emacs
 
 The personal Doom configuration lives in `.config/doom`. The installer clones
@@ -325,6 +327,7 @@ The theme implementation follows each application's native format:
 | `Super + F1` / `Super + /` | Show the keyboard shortcut cheatsheet |
 | `Super + A` | Open audio settings |
 | `Super + Shift + A` | Pick a folder (Enter alone = home) and start the default coding agent there; choose Claude Code, Codex, OpenCode, or Amp under Defaults |
+| `Super + Ctrl + A` | Choose an installed coding agent, then a folder |
 | `Super + Q` | Close active window |
 | `Super + Shift + Q` | Force-kill active window |
 | `Super + F` | Toggle fullscreen |
@@ -360,7 +363,10 @@ The theme implementation follows each application's native format:
 | `Super + Ctrl + 1..0` | Move a window without leaving the current workspace |
 | `Super + Page Up/Down` | Switch to the previous/next occupied workspace |
 | `Super + S` | Toggle the scratchpad |
-| `Super + Shift + S` | Send a window to the scratchpad |
+| `Super + Alt + S` | Send a window to the scratchpad |
+| `Super + I` | Toggle a second scratchpad; no app is started automatically |
+| `Super + Alt + I` | Send a window to the second scratchpad |
+| `Super + H` | Toggle the selected music player in its own scratchpad, maximized with the top bar visible |
 | `Super + Return` | Open a dropdown terminal |
 | `Super + ,/.` | Focus the previous/next monitor |
 | `Super + Shift + ,/.` | Move a window to the previous/next monitor |
@@ -458,9 +464,25 @@ coding agent, clipboard, emoji, file search, calculator, and other pickers are
 ordinary shell scripts. It supports tab-separated hidden columns
 (`-display-columns`), an icon column, custom text, and plain text prompts.
 
-The Defaults menu configures the terminal, login shell, browser, editor, file
-manager, PDF viewer, image viewer, and video player. It updates both the
-dotfiles launch wrappers and the relevant XDG MIME handlers.
+The Defaults menu (`Super + Ctrl + D`) configures the terminal, login shell,
+browser, editor, file manager, notes app, coding agent, music player, PDF viewer,
+image viewer, and video player. It updates the dotfiles launch wrappers and,
+where relevant, XDG MIME handlers. The shared desktop PATH includes
+`~/.opencode/bin`, so OpenCode appears in the agent pickers when installed there.
+
+**Music player (Win+H)** lists installed supported players, including ncspot and
+Spotify, and saves the choice in `.config/dotfiles/defaults/music`. ncspot is the
+fallback when no preference is saved.
+Close the current music window after changing the selection; the next
+`Super + H` launches the new choice. Hiding the scratchpad keeps music playing.
+The tray drawer includes a music icon while the player is in the scratchpad;
+clicking it performs the same toggle as `Super + H`.
+
+When Spotify is already installed, the scratchpad uses
+`spotify-launcher --skip-update` to avoid update dialogs on opening it. Run
+`spotify-launcher` normally to check for updates. A first launch without an
+installed client still runs the installation process.
+
 Less frequent information expands in hover drawers: tray applications;
 Bluetooth; microphone state; brightness and system resources; updates, night
 light, and idle inhibition; and the power action. Click the network, audio,

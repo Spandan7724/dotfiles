@@ -88,6 +88,19 @@ hl.window_rule({
     size = { "(monitor_w*0.72)", "(monitor_h*0.62)" },
 })
 
+-- Create the selected music player on demand; hiding it keeps music playing.
+hl.workspace_rule({
+    workspace = "special:ncspot",
+    on_created_empty = os.getenv("HOME") .. "/.config/hypr/scripts/default-launcher.sh music",
+})
+
+hl.window_rule({
+    name = "ncspot-scratchpad",
+    match = { class = "^(dotfiles-ncspot)$" },
+    workspace = "special:ncspot",
+    maximize = true,
+})
+
 hl.window_rule({
     name = "float-system-monitor",
     match = { class = "^(dotfiles-btop)$" },

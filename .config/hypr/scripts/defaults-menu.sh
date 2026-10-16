@@ -69,6 +69,10 @@ choices() {
             printf 'nvim\tNeovim\tnvim.desktop\tNew note in ~/notes\n'
             notes_apps | awk -F '\t' '{ print "app:" $1 "\t" $2 "\t" $1 ".desktop\t" }' ;;
         agent) printf '%s\t%s\t\t\n' claude 'Claude Code' codex Codex opencode OpenCode amp Amp mu Mu ;;
+        music) printf '%s\t%s\t%s\t\n' ncspot ncspot ncspot.desktop \
+            spotify-launcher Spotify spotify-launcher.desktop spotify Spotify spotify.desktop \
+            spotify_player 'Spotify Player' '' cmus cmus '' ncmpcpp ncmpcpp '' \
+            musikcube musikcube '' termusic termusic '' kew kew '' mocp 'Music on Console' '' ;;
         pdf) printf '%s\t%s\t%s\t\n' zathura Zathura org.pwmt.zathura.desktop \
             evince 'Document Viewer' org.gnome.Evince.desktop okular Okular org.kde.okular.desktop ;;
         image) printf '%s\t%s\t%s\t\n' imv imv imv.desktop loupe Loupe org.gnome.Loupe.desktop \
@@ -104,11 +108,12 @@ current() {
     local category="$1" desktop=""
     case "$category" in
         shell) basename "$(getent passwd "$USER" | cut -d: -f7)"; return ;;
-        terminal | browser | editor | file-manager | notes | agent)
+        terminal | browser | editor | file-manager | notes | agent | music)
             if [[ -s "$state_dir/$category" ]]; then cat -- "$state_dir/$category"; return; fi
             case "$category" in
                 terminal) printf 'kitty\n' ;; browser) printf 'zen-browser\n' ;; editor) printf 'nvim\n' ;;
                 file-manager) printf 'thunar\n' ;; notes) printf 'doom\n' ;;
+                music) printf 'ncspot\n' ;;
             esac
             return ;;
     esac
@@ -139,6 +144,7 @@ choose() { # choose <category> <title>
         # Shells and CLI agents have no desktop entry, so they get a glyph.
         [[ -z "$icon" && "$category" == shell ]] && icon=$'\U000f018d'
         [[ -z "$icon" && "$category" == agent ]] && icon=$'\U000f140b'
+        [[ -z "$icon" && "$category" == music ]] && icon=$'\U000f075a'
         printf '%s%s\t%s\t%s\t%s\n' "$marker" "$label" "${detail:-$program}" "${icon:-$program}" "$program"
     done | "$menu" -no-custom -p "$title" -display-columns 1 -detail-column 2 -icon-column 3 |
         awk -F '\t' '{ print $NF }'
@@ -160,6 +166,7 @@ category="$({
     row file-manager '\U000f024b' 'File manager' 'Apps'
     row notes '\U000f082e' 'Notes app' 'Apps'
     row agent '\U000f140b' 'Coding agent' 'Apps'
+    row music '\U000f075a' 'Music player (Win+H)' 'Apps'
     row pdf '\U000f0226' 'PDF viewer' 'Files'
     row image '\U000f02e9' 'Image viewer' 'Files'
     row video '\U000f0439' 'Video player' 'Files'
@@ -174,6 +181,7 @@ case "$category" in
     file-manager) title='Default file manager' ;;
     notes) title='Notes app' ;;
     agent) title='Coding agent' ;;
+    music) title='Music player (Win+H)' ;;
     pdf) title='Default PDF viewer' ;;
     image) title='Default image viewer' ;;
     video) title='Default video player' ;;
@@ -196,10 +204,14 @@ case "$category" in
     editor | file-manager)
         printf '%s\n' "$program" >"$state_dir/$category"
         [[ -n "$desktop" ]] && mimes "$category" | set_mimes "$desktop" ;;
-    notes | agent)
+    notes | agent | music)
         printf '%s\n' "$program" >"$state_dir/$category" ;;
     pdf | image | video)
         mimes "$category" | set_mimes "$desktop" ;;
 esac
 
-notify-send 'Defaults' "$(field "$category" "$program" 2) is now the default."
+if [[ "$category" == music ]]; then
+    notify-send 'Defaults' "$(field "$category" "$program" 2) is now the music player. Close the current music window to use it next time you press Win+H."
+else
+    notify-send 'Defaults' "$(field "$category" "$program" 2) is now the default."
+fi

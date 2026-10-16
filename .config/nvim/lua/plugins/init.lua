@@ -49,6 +49,15 @@ local treesitter_filetypes = {
 
 return {
   {
+    "nvim-tree/nvim-tree.lua",
+    opts = {
+      filters = {
+        git_ignored = false,
+      },
+    },
+  },
+
+  {
     "stevearc/conform.nvim",
     event = "BufWritePre",
     opts = require "configs.conform",
