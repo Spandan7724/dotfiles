@@ -221,6 +221,27 @@ PanelWindow {
             .filter(l => l.length)
     }
 
+    // Apps set to run on the NVIDIA GPU, like Windows' "High performance"
+    // graphics setting: one desktop id per line in
+    // ~/.config/dotfiles/dgpu-apps.txt, edited by hypr/scripts/gpu-apps.sh,
+    // which also puts prime-run in their desktop files. Here it only labels
+    // them in the launcher.
+    property var dgpuApps: []
+
+    FileView {
+        path: root.home + "/.config/dotfiles/dgpu-apps.txt"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: root.dgpuApps = text().split("\n")
+            .map(l => l.replace(/#.*/, "").trim().replace(/\.desktop$/, ""))
+            .filter(l => l.length)
+    }
+
+    function onDgpu(app) {
+        return dgpuApps.includes(app.id.replace(/\.desktop$/, ""))
+    }
+
     // ---- rows --------------------------------------------------------------------
 
     readonly property var apps: DesktopEntries.applications.values
@@ -248,7 +269,7 @@ PanelWindow {
             icon: "",
             image: Quickshell.iconPath(app.icon, true),
             label: app.name,
-            detail: app.genericName || app.comment || "",
+            detail: (onDgpu(app) ? "NVIDIA GPU  ·  " : "") + (app.genericName || app.comment || ""),
             trailing: "",
         }
     }

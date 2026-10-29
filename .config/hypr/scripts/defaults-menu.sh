@@ -20,31 +20,95 @@ fi
 
 menu="$HOME/.config/hypr/scripts/menu-select"
 
+# Every launcher, as "desktop-id<TAB>Name<TAB>MimeType<TAB>text<TAB>listed"
+# lines, read once up front. User entries shadow system ones with the same id
+# (a hidden user copy hides the app), text is the lowercased name,
+# description, keywords, and categories, and listed is 0 for NoDisplay
+# entries, which still count as file handlers but not as apps to launch.
+desktop_entries() {
+    local dirs=("${XDG_DATA_HOME:-$HOME/.local/share}/applications") data dir files=()
+    IFS=: read -ra data <<<"${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+    for dir in "${data[@]}"; do dirs+=("$dir/applications"); done
+    for dir in "${dirs[@]}"; do
+        for file in "$dir"/*.desktop; do [[ -f "$file" ]] && files+=("$file"); done
+    done
+    ((${#files[@]})) || return 0
+    awk '
+        function flush() {
+            if (id != "" && !seen[id]++ && !hidden && name != "") print id "\t" name "\t" mime "\t" text "\t" !nodisplay
+        }
+        FNR == 1 {
+            flush()
+            id = FILENAME; sub(/.*\//, "", id); sub(/\.desktop$/, "", id)
+            main = 0; name = ""; mime = ""; text = ""; hidden = 0; nodisplay = 0
+        }
+        /^\[/ { main = ($0 == "[Desktop Entry]"); next }
+        !main { next }
+        /^Name=/ && name == "" { name = substr($0, 6) }
+        /^MimeType=/ { mime = substr($0, 10) }
+        /^NoDisplay=true/ { nodisplay = 1 }
+        /^Hidden=true/ { hidden = 1 }
+        /^Type=/ && $0 != "Type=Application" { hidden = 1 }
+        /^(Name|GenericName|Keywords|Comment|Categories)=/ { text = text " " tolower($0) }
+        END { flush() }' "${files[@]}"
+}
+entries="$(desktop_entries)"
+
 # Installed notes apps, as "desktop-id<TAB>Name" lines. Any launcher whose
 # name, description, keywords, or categories talk about notes, notebooks,
 # journals, or a knowledge base counts, so apps such as Obsidian, Logseq, or
 # Joplin appear here once installed (including Flatpaks) with no list to edit.
 notes_apps() {
-    local dirs=("${XDG_DATA_HOME:-$HOME/.local/share}/applications") data dir file
-    IFS=: read -ra data <<<"${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
-    for dir in "${data[@]}"; do dirs+=("$dir/applications"); done
-    for dir in "${dirs[@]}"; do
-        for file in "$dir"/*.desktop; do
-            [[ -f "$file" ]] || continue
-            awk -v id="$(basename "$file" .desktop)" '
-                /^\[/ { main = ($0 == "[Desktop Entry]"); next }
-                !main { next }
-                /^Name=/ && name == "" { name = substr($0, 6) }
-                /^(NoDisplay|Hidden)=true/ { hidden = 1 }
-                /^Type=/ && $0 != "Type=Application" { hidden = 1 }
-                /^(Name|GenericName|Keywords|Comment|Categories)=/ { text = text " " tolower($0) }
-                END {
-                    if (hidden || name == "") exit
-                    if (text ~ /(^|[^a-z])(notes?|notebook|note-taking|notetaking|zettelkasten|journal|knowledge base|second brain)([^a-z]|$)/)
-                        print id "\t" name
-                }' "$file"
-        done
-    done | awk -F '\t' '!seen[$1]++' | sort -t $'\t' -k2,2
+    awk -F '\t' '$5 && $4 ~ /(^|[^a-z])(notes?|notebook|note-taking|notetaking|zettelkasten|journal|knowledge base|second brain)([^a-z]|$)/ { print $1 "\t" $2 }' \
+        <<<"$entries" | sort -t $'\t' -k2,2
+}
+
+# Apps that say they open any of the MIME types on stdin, as
+# "desktop-id<TAB>Name" lines sorted by name.
+mime_apps() {
+    awk -F '\t' 'NR == FNR { if ($0 != "") want[$0] = 1; next }
+        { n = split($3, m, ";"); for (i = 1; i <= n; i++) if (m[i] in want) { print $1 "\t" $2; next } }' \
+        - <(printf '%s\n' "$entries") | sort -t $'\t' -k2,2
+}
+
+# An app's name from its desktop id.
+app_name() {
+    awk -F '\t' -v id="$1" '$1 == id { print $2; exit }' <<<"$entries"
+}
+
+# The MIME types one app says it opens, one per line.
+app_mimes() {
+    awk -F '\t' -v id="$1" '$1 == id { gsub(";", "\n", $3); printf "%s", $3; exit }' <<<"$entries"
+}
+
+# Every file type some installed app opens, as "description<TAB>detail<TAB>
+# icon<TAB>type" rows for the menu. The detail lists the file extensions
+# (so typing "docx" finds Word files) and the app that opens it now.
+file_types() {
+    local db=/usr/share/mime/packages/freedesktop.org.xml mimeapps="${XDG_CONFIG_HOME:-$HOME/.config}/mimeapps.list"
+    awk -F '\t' '
+        FILENAME == "-" { n = split($3, m, ";"); for (i = 1; i <= n; i++) if (m[i] != "") handled[m[i]] = 1
+                          app[$1 ".desktop"] = $2; next }
+        FILENAME ~ /mimeapps/ {
+            if (/^\[/) { defaults = ($0 == "[Default Applications]"); next }
+            if (defaults && (eq = index($0, "="))) { d = substr($0, eq + 1); sub(/;.*/, "", d); now[substr($0, 1, eq - 1)] = d }
+            next
+        }
+        /<mime-type type="/ { type = $0; sub(/.*type="/, "", type); sub(/".*/, "", type); exts = "" }
+        /<comment>/ && !(type in comment) { c = $0; sub(/.*<comment>/, "", c); sub(/<\/comment>.*/, "", c)
+                                            gsub(/&amp;/, "\\&", c); comment[type] = c }
+        /<glob pattern="\*\.[^"*]*"/ { g = $0; sub(/.*pattern="\*/, "", g); sub(/".*/, "", g)
+                                        exts = exts (exts == "" ? "" : " ") g }
+        /<\/mime-type>/ { ext[type] = exts }
+        END {
+            for (t in handled) {
+                if (t ~ /^x-scheme-handler\//) continue
+                detail = (ext[t] != "" ? ext[t] : t)
+                if (t in now) detail = detail "  ·  " (now[t] in app ? app[now[t]] : now[t])
+                icon = t; sub("/", "-", icon)
+                print (t in comment ? comment[t] : t) "\t" detail "\t" icon "\t" t
+            }
+        }' - "$mimeapps" "$db" <<<"$entries" | sort -f -t $'\t' -k1,1
 }
 
 # The choices for a category as "program<TAB>label<TAB>desktop<TAB>detail"
@@ -73,12 +137,9 @@ choices() {
             spotify-launcher Spotify spotify-launcher.desktop spotify Spotify spotify.desktop \
             spotify_player 'Spotify Player' '' cmus cmus '' ncmpcpp ncmpcpp '' \
             musikcube musikcube '' termusic termusic '' kew kew '' mocp 'Music on Console' '' ;;
-        pdf) printf '%s\t%s\t%s\t\n' zathura Zathura org.pwmt.zathura.desktop \
-            evince 'Document Viewer' org.gnome.Evince.desktop okular Okular org.kde.okular.desktop ;;
-        image) printf '%s\t%s\t%s\t\n' imv imv imv.desktop loupe Loupe org.gnome.Loupe.desktop \
-            ristretto Ristretto org.xfce.ristretto.desktop feh feh feh.desktop ;;
-        video) printf '%s\t%s\t%s\t\n' mpv mpv mpv.desktop vlc VLC vlc.desktop \
-            celluloid Celluloid io.github.celluloid_player.Celluloid.desktop ;;
+        # File types list every installed app that says it opens them.
+        pdf | image | video | audio | document | spreadsheet | presentation | ebook | archive | mime:*)
+            mimes "$1" | mime_apps | awk -F '\t' '{ print "app:" $1 "\t" $2 "\t" $1 ".desktop\t" }' ;;
     esac
 }
 
@@ -97,8 +158,20 @@ mimes() {
         editor) printf '%s\n' text/plain text/markdown application/json ;;
         file-manager) printf '%s\n' inode/directory ;;
         pdf) printf '%s\n' application/pdf ;;
-        image) printf '%s\n' image/jpeg image/png image/webp image/gif image/avif ;;
-        video) printf '%s\n' video/mp4 video/x-matroska video/webm video/quicktime ;;
+        image) printf '%s\n' image/jpeg image/png image/webp image/gif image/avif image/bmp image/tiff image/svg+xml ;;
+        video) printf '%s\n' video/mp4 video/x-matroska video/webm video/quicktime video/x-msvideo video/mpeg ;;
+        audio) printf '%s\n' audio/mpeg audio/flac audio/ogg audio/x-vorbis+ogg audio/opus audio/x-wav audio/wav \
+            audio/mp4 audio/aac audio/x-m4a ;;
+        document) printf '%s\n' application/vnd.openxmlformats-officedocument.wordprocessingml.document \
+            application/msword application/vnd.oasis.opendocument.text application/rtf text/rtf ;;
+        spreadsheet) printf '%s\n' application/vnd.openxmlformats-officedocument.spreadsheetml.sheet \
+            application/vnd.ms-excel application/vnd.oasis.opendocument.spreadsheet text/csv ;;
+        presentation) printf '%s\n' application/vnd.openxmlformats-officedocument.presentationml.presentation \
+            application/vnd.ms-powerpoint application/vnd.oasis.opendocument.presentation ;;
+        ebook) printf '%s\n' application/epub+zip application/x-mobipocket-ebook application/vnd.comicbook+zip ;;
+        archive) printf '%s\n' application/zip application/x-tar application/x-compressed-tar application/x-7z-compressed \
+            application/vnd.rar application/x-rar application/gzip application/x-xz-compressed-tar application/zstd ;;
+        mime:*) printf '%s\n' "${1#mime:}" ;;
     esac
 }
 
@@ -117,9 +190,13 @@ current() {
             esac
             return ;;
     esac
-    # File types: ask what opens the category's first MIME type.
-    desktop="$(xdg-mime query default "$(mimes "$category" | head -n 1)" 2>/dev/null || true)"
-    [[ -n "$desktop" ]] && choices "$category" | awk -F '\t' -v d="$desktop" '!found && $3 == d { print $1; found = 1 }'
+    # File types: what opens the first of the category's MIME types that has
+    # a default.
+    local mime
+    while read -r mime; do
+        desktop="$(xdg-mime query default "$mime" 2>/dev/null || true)"
+        [[ -n "$desktop" ]] && { printf 'app:%s\n' "${desktop%.desktop}"; break; }
+    done < <(mimes "$category")
     return 0
 }
 
@@ -145,7 +222,7 @@ choose() { # choose <category> <title>
         [[ -z "$icon" && "$category" == shell ]] && icon=$'\U000f018d'
         [[ -z "$icon" && "$category" == agent ]] && icon=$'\U000f140b'
         [[ -z "$icon" && "$category" == music ]] && icon=$'\U000f075a'
-        printf '%s%s\t%s\t%s\t%s\n' "$marker" "$label" "${detail:-$program}" "${icon:-$program}" "$program"
+        printf '%s%s\t%s\t%s\t%s\n' "$marker" "$label" "${detail:-${program#app:}}" "${icon:-$program}" "$program"
     done | "$menu" -no-custom -p "$title" -display-columns 1 -detail-column 2 -icon-column 3 |
         awk -F '\t' '{ print $NF }'
 }
@@ -155,8 +232,12 @@ choose() { # choose <category> <title>
 category="$({
     row() { # row <id> <icon> <label> <section>
         local now label
+        # Skip file types nothing installed can open.
+        [[ -n "$(mimes "$1")" && -z "$(choices "$1")" ]] && return
         now="$(current "$1")"
         label="$(field "$1" "$now" 2)"
+        [[ -z "$label" && "$now" == app:* ]] && label="$(app_name "${now#app:}")"
+        now="${now#app:}"
         printf '%s\t%s\t%b\t%s\t%s\n' "$3" "${label:-${now:-Not set}}" "$2" "$4" "$1"
     }
     row terminal '\U000f018d' 'Terminal' 'Apps'
@@ -170,6 +251,13 @@ category="$({
     row pdf '\U000f0226' 'PDF viewer' 'Files'
     row image '\U000f02e9' 'Image viewer' 'Files'
     row video '\U000f0439' 'Video player' 'Files'
+    row audio '\U000f0388' 'Audio player' 'Files'
+    row document '\U000f022c' 'Word documents' 'Files'
+    row spreadsheet '\U000f021b' 'Spreadsheets' 'Files'
+    row presentation '\U000f0227' 'Presentations' 'Files'
+    row ebook '\U000f00ba' 'E-books' 'Files'
+    row archive '\U000f05c4' 'Archives' 'Files'
+    printf '%s\t%s\t%b\t%s\t%s\n' 'Other file type' 'Any type, search by name or extension' '\U000f0214' 'Files' other
 } | "$menu" -no-custom -p 'Defaults' -display-columns 1 -detail-column 2 -icon-column 3 -section-column 4)" || exit 0
 category="${category##*$'\t'}"
 
@@ -185,6 +273,16 @@ case "$category" in
     pdf) title='Default PDF viewer' ;;
     image) title='Default image viewer' ;;
     video) title='Default video player' ;;
+    audio) title='Default audio player' ;;
+    document) title='Word documents' ;;
+    spreadsheet) title='Spreadsheets' ;;
+    presentation) title='Presentations' ;;
+    ebook) title='E-books' ;;
+    archive) title='Archives' ;;
+    other)
+        type="$(file_types | "$menu" -no-custom -p 'File type' -display-columns 1 -detail-column 2 -icon-column 3)" || exit 0
+        title="${type%%$'\t'*}"
+        category="mime:${type##*$'\t'}" ;;
     *) exit 0 ;;
 esac
 program="$(choose "$category" "$title")" || exit 0
@@ -206,8 +304,10 @@ case "$category" in
         [[ -n "$desktop" ]] && mimes "$category" | set_mimes "$desktop" ;;
     notes | agent | music)
         printf '%s\n' "$program" >"$state_dir/$category" ;;
-    pdf | image | video)
-        mimes "$category" | set_mimes "$desktop" ;;
+    *)
+        # Only the types the app says it opens, so picking a viewer that
+        # handles PNG but not SVG leaves SVG alone.
+        mimes "$category" | grep -Fxf <(app_mimes "${program#app:}") | set_mimes "$desktop" || true ;;
 esac
 
 if [[ "$category" == music ]]; then

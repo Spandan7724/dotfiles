@@ -4,7 +4,7 @@
 #
 #   display.sh status            JSON: focused monitor, scale, text size, brightness
 #   display.sh scale <value>     set the focused monitor's scale (1-3)
-#   display.sh text <percent>    set text size (80-150%): GTK apps and Kitty
+#   display.sh text <percent>    set text size (80-150%): GTK apps, Kitty, Ghostty
 #   display.sh brightness <pct>  set the backlight
 #
 # Scale is persisted to hypr/machine.lua when the monitor is listed there, so it
@@ -16,6 +16,7 @@ set -euo pipefail
 config_root="${XDG_CONFIG_HOME:-$HOME/.config}"
 state_file="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-text-size"
 kitty_size_file="$config_root/kitty/text-size.conf"
+ghostty_size_file="$config_root/ghostty/text-size.ghostty"
 machine_lua="$config_root/hypr/machine.lua"
 kitty_base_pt=10
 
@@ -91,11 +92,15 @@ set_text() {
     # pulled in by a globinclude at the end of it. Half-point steps.
     kitty_pt="$(awk -v p="$percent" -v b="$kitty_base_pt" 'BEGIN { printf "%.1f", int(b * p / 100 * 2 + 0.5) / 2 }')"
     if ((percent == 100)); then
-        rm -f -- "$kitty_size_file"
+        rm -f -- "$kitty_size_file" "$ghostty_size_file"
     else
         printf '# Written by hypr/scripts/display.sh; delete to use kitty.conf.\nfont_size %s\n' "$kitty_pt" >"$kitty_size_file"
+        # Ghostty shares Kitty's base size (font-size in config.ghostty).
+        mkdir -p "$(dirname "$ghostty_size_file")"
+        printf '# Written by hypr/scripts/display.sh; delete to use config.ghostty.\nfont-size = %s\n' "$kitty_pt" >"$ghostty_size_file"
     fi
     pkill -USR1 -x kitty 2>/dev/null || true
+    pkill -USR2 -x ghostty 2>/dev/null || true
 }
 
 case "${1:-status}" in

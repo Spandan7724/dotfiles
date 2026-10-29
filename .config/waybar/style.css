@@ -49,6 +49,7 @@ window#waybar {
 #custom-nightlight,
 #custom-notifications,
 #custom-updates,
+#custom-dgpu,
 #custom-media,
 #window,
 #clock,
@@ -167,6 +168,7 @@ window#waybar {
 #custom-emacs,
 #custom-music,
 #custom-display,
+#custom-dgpu,
 #custom-tray,
 #custom-system,
 #custom-notifications,
@@ -248,6 +250,16 @@ window#waybar {
 #workspaces .ws:hover {
     color: @hover;
     background: alpha(@foreground, 0.12);
+}
+
+/* NVIDIA green, fixed rather than from the theme so it reads as "dGPU". */
+#custom-dgpu.active {
+    color: #9fdc72;
+    background: alpha(#9fdc72, 0.14);
+}
+
+#custom-dgpu.active:hover {
+    background: alpha(#9fdc72, 0.24);
 }
 
 .drawer-child {

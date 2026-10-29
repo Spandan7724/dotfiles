@@ -19,6 +19,9 @@ if [[ -f "$current/fish.fish" ]] && command -v fish >/dev/null 2>&1; then
     fish -c "source '$current/fish.fish'" 2>/dev/null || true
 fi
 
+# Ghostty's colours are derived from the kitty palette.
+"$config_root/themes/ghostty-colors.sh"
+
 # cava reloads its config, and with it the theme, on SIGUSR1.
 pkill -USR1 -x cava 2>/dev/null || true
 

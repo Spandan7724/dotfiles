@@ -18,14 +18,22 @@ zstyle ':completion:*' list-colors \
   '=(#b)*(=2)=38;5;245' \
   '=(#b)*(=3)=38;5;240'
 
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=8'
 source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
-ZSH_HIGHLIGHT_STYLES[command]='fg=white'
-ZSH_HIGHLIGHT_STYLES[builtin]='fg=white'
-ZSH_HIGHLIGHT_STYLES[function]='fg=white'
-ZSH_HIGHLIGHT_STYLES[alias]='fg=white'
-ZSH_HIGHLIGHT_STYLES[path]='fg=245'
-ZSH_HIGHLIGHT_STYLES[comment]='fg=240'
-ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=245'
+# Highlighting and suggestion colours follow the desktop theme. The file is
+# read again at the next prompt whenever it changes, so open shells pick up a
+# theme switch too.
+zmodload -F zsh/stat b:zstat
+_dotfiles_theme_zsh="${XDG_CONFIG_HOME:-$HOME/.config}/themes/current/zsh.zsh"
+_dotfiles_theme_stamp=
+_dotfiles_theme_load() {
+    local stamp
+    stamp="$(zstat -L +mtime "$_dotfiles_theme_zsh" 2>/dev/null)$(zstat +mtime "$_dotfiles_theme_zsh" 2>/dev/null)"
+    [[ -n "$stamp" && "$stamp" != "$_dotfiles_theme_stamp" ]] || return 0
+    _dotfiles_theme_stamp="$stamp"
+    source "$_dotfiles_theme_zsh"
+}
+_dotfiles_theme_load
+autoload -Uz add-zsh-hook
+add-zsh-hook precmd _dotfiles_theme_load

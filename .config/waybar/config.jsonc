@@ -22,6 +22,7 @@
     "modules-right": [
         "group/media",
         "privacy",
+        "custom/dgpu",
         "group/tray",
         "group/audio",
         "custom/display",
@@ -460,6 +461,14 @@
         "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
         "on-click": "~/.config/hypr/scripts/panel.sh bluetooth",
         "on-click-right": "blueman-manager"
+    },
+
+    // Shown only while an app is using the NVIDIA GPU; the tooltip names them.
+    "custom/dgpu": {
+        "exec": "~/.config/waybar/scripts/dgpu-status.sh",
+        "return-type": "json",
+        "interval": 3,
+        "on-click": "~/.config/hypr/scripts/gpu-apps.sh"
     },
 
     "custom/display": {

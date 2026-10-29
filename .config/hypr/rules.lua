@@ -40,6 +40,13 @@ hl.window_rule({
     opacity = "1.0 override",
 })
 
+-- Browsers stay opaque (keep in sync with browser_classes in keybinds.lua)
+hl.window_rule({
+    name = "opaque-browsers",
+    match = { class = "^(zen|zen-browser|firefox|librewolf|Brave-browser|brave-browser|chromium|Chromium|google-chrome|Google-chrome|vivaldi-stable)$" },
+    opacity = "1.0 override",
+})
+
 hl.window_rule({
     name = "float-pavucontrol",
     match = { class = "^(pavucontrol)$" },

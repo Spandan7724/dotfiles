@@ -94,11 +94,9 @@
 (add-hook 'emacs-startup-hook (lambda () (dotfiles/notify-waybar 1)))
 (add-hook 'kill-emacs-hook (lambda () (dotfiles/notify-waybar 1)))
 
-;; Autosave notes (~/notes, the Super+Shift+N launcher's folder, and
-;; `org-directory') straight to their real files, so nothing typed is lost
-;; to a crash, a power-off or a closed window. Other files keep Doom's usual
-;; behaviour. Notes save after a few idle seconds, and also whenever a frame
-;; closes, Emacs loses focus, or Emacs is killed (e.g. SIGTERM at shutdown).
+;; Save file buffers straight to their real files after one idle second.
+;; Notes (~/notes and `org-directory') also save whenever a frame closes,
+;; Emacs loses focus, or Emacs is killed (e.g. SIGTERM at shutdown).
 (defun dotfiles/note-buffer-p ()
   (and buffer-file-name
        (seq-some (lambda (dir)
@@ -109,7 +107,7 @@
   (save-some-buffers t #'dotfiles/note-buffer-p))
 
 (setq auto-save-visited-interval 1
-      auto-save-visited-predicate #'dotfiles/note-buffer-p)
+      auto-save-visited-predicate nil)
 (auto-save-visited-mode 1)
 
 (add-hook 'delete-frame-functions #'dotfiles/save-notes)

@@ -80,6 +80,12 @@ bind(mainMod .. " + SHIFT + minus", hl.dsp.layout("splitratio -0.05"), "Shrink c
 bind(mainMod .. " + SHIFT + equal", hl.dsp.layout("splitratio +0.05"), "Grow current split", { repeating = true })
 local default_opacity = 0.9 -- keep in sync with the opacity rule in rules.lua
 local opacity_opaque = {}
+-- Classes that are opaque by default (the opaque-browsers rule in rules.lua).
+local browser_classes = {
+    ["zen"] = true, ["zen-browser"] = true, ["firefox"] = true, ["librewolf"] = true,
+    ["Brave-browser"] = true, ["brave-browser"] = true, ["chromium"] = true, ["Chromium"] = true,
+    ["google-chrome"] = true, ["Google-chrome"] = true, ["vivaldi-stable"] = true,
+}
 
 section("Windows")
 bind(mainMod .. " + O", launch(scripts .. "/window-pop.sh"), "Pop window out (float and pin)")
@@ -89,8 +95,12 @@ bind(mainMod .. " + SHIFT + O", function()
         return
     end
 
-    local opaque = not opacity_opaque[window.address]
-    opacity_opaque[window.address] = opaque or nil
+    local is_opaque = opacity_opaque[window.address]
+    if is_opaque == nil then
+        is_opaque = browser_classes[window.class] or false
+    end
+    local opaque = not is_opaque
+    opacity_opaque[window.address] = opaque
     -- set_prop "opacity" only covers the focused state; opacity_inactive is a
     -- separate prop, so set both or the window reverts to the rule when unfocused.
     local alpha = tostring(opaque and 1.0 or default_opacity)

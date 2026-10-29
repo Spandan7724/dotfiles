@@ -73,6 +73,7 @@ fi
 # Wlogout read their configuration at launch, so they need no signal here.
 pkill -SIGUSR2 waybar 2>/dev/null || true
 pkill -SIGUSR1 kitty 2>/dev/null || true
+"$themes_root/ghostty-colors.sh"
 if command -v dunstctl >/dev/null 2>&1; then
     dunstctl reload >/dev/null 2>&1 || true
 fi

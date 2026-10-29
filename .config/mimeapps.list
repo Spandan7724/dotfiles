@@ -12,6 +12,13 @@ image/png=imv.desktop
 image/webp=imv.desktop
 image/gif=imv.desktop
 image/avif=imv.desktop
+x-scheme-handler/rpi-imager=com.raspberrypi.rpi-imager-uri-handler.desktop
+application/vnd.openxmlformats-officedocument.wordprocessingml.document=libreoffice-writer.desktop
+application/msword=libreoffice-writer.desktop
+application/vnd.oasis.opendocument.text=libreoffice-writer.desktop
+application/rtf=libreoffice-writer.desktop
+text/rtf=libreoffice-writer.desktop
 
 [Added Associations]
 text/x-tex=dev.zed.Zed.desktop;
+application/vnd.openxmlformats-officedocument.wordprocessingml.document=libreoffice-writer.desktop;
