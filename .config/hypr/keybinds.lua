@@ -46,7 +46,6 @@ bind(mainMod .. " + SHIFT + A", launch(scripts .. "/agent-launcher.sh"), "Start 
 bind(mainMod .. " + CTRL + A", launch(scripts .. "/agent-launcher.sh --choose"), "Choose a coding agent, then a folder")
 bind(mainMod .. " + SHIFT + B", launch(terminal .. " --class dotfiles-btop -e btop"), "Open system monitor")
 section("Tools")
-bind(mainMod .. " + R", launch(scripts .. "/file-search.sh"), "Search files")
 bind(mainMod .. " + SHIFT + D", launch(scripts .. "/web-search.sh"), "Search the web")
 bind(mainMod .. " + equal", launch(scripts .. "/calculator.sh"), "Open calculator")
 bind(mainMod .. " + semicolon", launch(scripts .. "/emoji.sh"), "Choose emoji or symbol")
