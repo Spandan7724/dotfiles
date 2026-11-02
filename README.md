@@ -154,7 +154,7 @@ builds the packages without touching that configuration. After changing
 
 ## Virtual machines
 
-`Super + Shift + V` (or Setup → Virtual machines in the desktop menu) opens a
+`Super + Ctrl + V` (or Setup → Virtual machines in the desktop menu) opens a
 themed virtual machine manager built with Quickshell
 (`.config/quickshell/vm-manager`). It lists every libvirt VM on
 `qemu:///system` with its state and resources, and offers Console, Shut down,
@@ -380,12 +380,12 @@ The theme implementation follows each application's native format:
 | `Super + Escape` / `Super + Alt + Space` / `Super + F2` | Open the unified desktop control menu |
 | `Super + Shift + W` | Toggle Waybar |
 | `Super + C` / `Super + V` / `Super + X` | Universal copy / paste / cut (works in terminals too) |
-| `Super + Ctrl + V` | Search clipboard history and paste the selected text or image |
+| `Super + Shift + V` | Search clipboard history in Vicinae and paste the selected text or image |
 | `Super + Ctrl + T` | Transcode a picture or video |
 | `Super + Ctrl + P` | Open the package-manager TUI |
 | `Super + Ctrl + D` | Choose default applications |
 | `Super + Ctrl + E` | Open the default code editor |
-| `Super + Shift + V` | Open or close the virtual machine manager |
+| `Super + Ctrl + V` | Open or close the virtual machine manager |
 | `Super + L` | Lock with Hyprlock |
 | `Super + Grave` | Open the lock, sleep, hibernate, logout, restart, and shutdown menu |
 | `Super + Shift + E` | Exit Hyprland |

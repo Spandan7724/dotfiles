@@ -49,7 +49,7 @@
         { "id": "setup.fingerprint", "icon": "󰈷", "label": "Fingerprint", "description": "Enroll fingers for unlocking", "keywords": "biometric enroll unlock security fprintd", "action": "kitty --class dotfiles-security --title 'Fingerprint setup' -e $scripts/fingerprint-setup.sh", "when": "command -v fprintd-enroll" },
         { "id": "setup.hyprland", "icon": "󰖲", "label": "Hyprland settings", "description": "Advanced compositor options in HyprMod", "keywords": "hyprmod compositor configuration advanced tweak", "action": "$scripts/hyprmod-launch.sh", "when": "command -v hyprmod" },
 
-        { "id": "tools.clipboard", "icon": "󰅌", "label": "Clipboard", "description": "Search history and paste", "keywords": "history copy paste text image cliphist", "action": "$scripts/clipboard.sh", "when": "command -v cliphist" },
+        { "id": "tools.clipboard", "icon": "󰅌", "label": "Clipboard", "description": "Search history and paste", "keywords": "history copy paste text image", "action": "vicinae cmd launch clipboard:history", "when": "command -v vicinae" },
         { "id": "tools.calculator", "icon": "󰪚", "label": "Calculator", "description": "Evaluate and copy a result", "keywords": "math qalc compute sum convert units", "action": "$scripts/calculator.sh" },
         { "id": "tools.emoji", "icon": "󰞅", "label": "Emoji", "description": "Find and copy an emoji or symbol", "keywords": "symbols glyph character unicode rofimoji", "action": "$scripts/emoji.sh", "when": "command -v rofimoji" },
         { "id": "tools.agent", "icon": "󱐋", "label": "Coding agent", "description": "Start your agent in a chosen folder", "keywords": "ai claude code codex opencode amp assistant llm terminal project", "action": "$scripts/agent-launcher.sh" },

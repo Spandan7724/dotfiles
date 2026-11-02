@@ -1,7 +1,7 @@
 // Virtual machine manager: a themed front end for libvirt (qemu:///system).
 // All work happens in vmctl.sh; this file only renders its JSON and calls it.
 //
-// Launch: quickshell -n -c vm-manager   (Super + Shift + V)
+// Launch: quickshell -n -c vm-manager   (Super + Ctrl + V)
 //
 // Keys, list page: Up/Down or j/k select a VM, Enter starts it (or opens the
 // console if it is running), s shut down, r reboot, Shift+F force stop,

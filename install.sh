@@ -1115,7 +1115,6 @@ verify_install() {
     verify_command "Fish" fish
     verify_command "Zsh" zsh
     verify_command "Starship" starship
-    verify_command "Clipboard history" cliphist
     verify_command "Screen recorder" wf-recorder
     verify_command "Screenshot editor" swappy
     verify_command "Color picker" hyprpicker

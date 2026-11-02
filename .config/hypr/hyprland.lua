@@ -22,8 +22,6 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("sh -c \"gsettings set org.blueman.general plugin-list \\\"['!StatusIcon', '!StatusNotifierItem', '!ShowConnected']\\\"; exec blueman-applet\"")
     hl.exec_cmd("sh -c 'command -v hypridle >/dev/null && { pgrep -x hypridle >/dev/null || exec hypridle; }'")
     hl.exec_cmd("sh -c 'sleep 1; ~/.config/hypr/scripts/workspace-overview.sh --load'")
-    hl.exec_cmd("wl-paste --type text --watch cliphist store")
-    hl.exec_cmd("wl-paste --type image --watch cliphist store")
     hl.exec_cmd("/usr/lib/polkit-kde-authentication-agent-1")
     hl.exec_cmd("~/.config/hypr/scripts/gpu-apps.sh --sync")
 
