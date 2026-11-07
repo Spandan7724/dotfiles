@@ -15,8 +15,11 @@ if ! hyprctl plugin list 2>/dev/null | grep -q '^Plugin hyprexpo '; then
         exit 1
     fi
 
-    if ! hyprctl plugin load "$plugin" >/dev/null; then
-        notify_error "HyprExpo could not be loaded for this Hyprland build."
+    # `hyprctl plugin load` exits 0 even when loading fails (for example after
+    # a Hyprland update breaks the plugin ABI), so check the plugin list instead.
+    hyprctl plugin load "$plugin" >/dev/null 2>&1
+    if ! hyprctl plugin list 2>/dev/null | grep -q '^Plugin hyprexpo '; then
+        notify_error "HyprExpo does not match this Hyprland build. Run ~/.config/hypr/scripts/install-hyprexpo.sh to rebuild it."
         exit 1
     fi
 fi
