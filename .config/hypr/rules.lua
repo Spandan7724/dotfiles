@@ -96,10 +96,14 @@ hl.window_rule({
 })
 
 -- Create the selected music player on demand; hiding it keeps music playing.
-hl.workspace_rule({
-    workspace = "special:ncspot",
-    on_created_empty = os.getenv("HOME") .. "/.config/hypr/scripts/default-launcher.sh music",
-})
+-- (Hyprland 0.57 deprecated the on_created_empty workspace rule in favour of
+-- a "workspace.created" handler that checks .is_empty.)
+hl.on("workspace.created", function(ws)
+    local name = ws.addressable_name or ws.name
+    if ws.special and ws.is_empty and (name == "special:ncspot" or ws.name == "ncspot") then
+        hl.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/default-launcher.sh music")
+    end
+end)
 
 hl.window_rule({
     name = "ncspot-scratchpad",
