@@ -12,9 +12,10 @@
 #   vmctl.sh catalog [--refresh]          JSON: quickget's downloadable OSes
 #   vmctl.sh isos                         JSON: ISOs already in the ISO pool
 #   vmctl.sh start|shutdown|reboot|destroy|console|details|delete NAME
-#   vmctl.sh create NAME CPUS RAM_MIB DISK_GIB uefi|bios 3d|basic LABEL quickget OS RELEASE [EDITION]
-#   vmctl.sh create NAME CPUS RAM_MIB DISK_GIB uefi|bios 3d|basic LABEL iso PATH
-#   vmctl.sh create NAME CPUS RAM_MIB DISK_GIB uefi|bios 3d|basic LABEL pool VOLUME
+#   vmctl.sh net NAME up|down             plug or unplug the VM's virtual network cable
+#   vmctl.sh create NAME CPUS RAM_MIB DISK_GIB uefi|bios 3d|basic up|down LABEL quickget OS RELEASE [EDITION]
+#   vmctl.sh create NAME CPUS RAM_MIB DISK_GIB uefi|bios 3d|basic up|down LABEL iso PATH
+#   vmctl.sh create NAME CPUS RAM_MIB DISK_GIB uefi|bios 3d|basic up|down LABEL pool VOLUME
 #   vmctl.sh cancel|dismiss NAME          stop or forget a creation job
 
 set -uo pipefail
@@ -50,7 +51,8 @@ list_vms() {
     while IFS= read -r name; do
         [[ -n "$name" ]] || continue
         info="$(v dominfo "$name" 2>/dev/null)" || continue
-        jq -n --arg name "$name" --arg info "$info" --arg label "$(v desc "$name" 2>/dev/null)" '
+        jq -n --arg name "$name" --arg info "$info" --arg label "$(v desc "$name" 2>/dev/null)" \
+            --arg network "$(net_state "$name")" '
             def field($k): ($info | capture("(?m)^" + $k + ":\\s*(?<v>.*)$").v // "");
             {
                 name: $name,
@@ -58,7 +60,8 @@ list_vms() {
                 state: field("State"),
                 cpus: (field("CPU\\(s\\)") | tonumber? // 0),
                 memoryMiB: ((field("Max memory") | capture("(?<n>[0-9]+)").n | tonumber? // 0) / 1024 | floor),
-                autostart: (field("Autostart") == "enable")
+                autostart: (field("Autostart") == "enable"),
+                network: $network
             }'
     done < <(v list --all --name 2>/dev/null) | jq -s 'sort_by(.name)'
 }
@@ -117,6 +120,36 @@ open_console() {
         opts+=(--auto-resize=never)
     fi
     setsid -f virt-viewer --connect "$uri" "${opts[@]}" "$1" >/dev/null 2>&1
+}
+
+# Network link state: "up", "down" (every NIC unplugged) or "none" (no NIC).
+# The XML of a running VM reflects its live state.
+net_state() {
+    local xml nics down
+    xml="$(v dumpxml "$1" 2>/dev/null)"
+    nics="$(grep -c '<interface ' <<<"$xml")"
+    down="$(grep -c "<link state='down'" <<<"$xml")"
+    if ((nics == 0)); then echo none
+    elif ((down >= nics)); then echo down
+    else echo up
+    fi
+}
+
+# Plug or unplug the virtual cable, like pulling it out of a real PC. The
+# guest sees the link drop instantly; nothing is removed from the VM. A running
+# VM is changed live and in its saved config, so the choice survives a reboot.
+cmd_net() {
+    local name="$1" state="$2" mac running=false
+    [[ "$state" == up || "$state" == down ]] || die "Network state must be up or down."
+    [[ "$(v domstate "$name" 2>/dev/null)" == "shut off" ]] || running=true
+    local -a macs
+    mapfile -t macs < <(v domiflist "$name" 2>/dev/null | awk 'NF >= 5 { print $5 }')
+    ((${#macs[@]})) || die "$name has no network adapter."
+    for mac in "${macs[@]}"; do
+        act domif-setlink "$name" "$mac" "$state"
+        $running && act domif-setlink "$name" "$mac" "$state" --config
+    done
+    return 0
 }
 
 cmd_delete() {
@@ -218,8 +251,8 @@ download_iso() { # download_iso OS RELEASE EDITION VOLUME
 # The commas in the --boot values are virt-install option syntax.
 # shellcheck disable=SC2054
 run_job() {
-    local cpus="$1" ram="$2" disk="$3" firmware="$4" graphics="$5" source="$6"
-    shift 6
+    local cpus="$1" ram="$2" disk="$3" firmware="$4" graphics="$5" network="$6" source="$7"
+    shift 7
     local volume os="" release=""
 
     ensure_iso_pool || fail "Could not create the $iso_pool storage pool."
@@ -294,25 +327,28 @@ run_job() {
     virt-install --connect "$uri" --name "$job_name" --metadata description="$job_label" \
         --vcpus "$cpus" --memory "$ram" --disk size="$disk",format=qcow2 \
         --cdrom "$iso_path" --osinfo detect=on,name="$fallback" \
-        --network network=default "${display[@]}" "${boot[@]}" \
+        --network "network=default,link.state=$network" "${display[@]}" "${boot[@]}" \
         --noautoconsole >>"$job_dir/$job_name.log" 2>&1 ||
         fail "virt-install failed: $(grep -m1 '^ERROR' "$job_dir/$job_name.log" | sed 's/^ERROR *//')"
 
     rm -f -- "$job_dir/$job_name.json" "$job_dir/$job_name.log"
-    notify-send 'Virtual machine created' "$job_name ($job_label) is booting its installer." 2>/dev/null
+    local note="$job_name ($job_label) is booting its installer."
+    [[ "$network" == down ]] && note+=" Its network is unplugged; plug it back in from the VM list when setup is done."
+    notify-send 'Virtual machine created' "$note" 2>/dev/null
     open_console "$job_name"
 }
 
 cmd_create() {
-    (($# >= 9)) || die "Usage: vmctl.sh create NAME CPUS RAM DISK uefi|bios 3d|basic LABEL SOURCE ARGS..."
+    (($# >= 10)) || die "Usage: vmctl.sh create NAME CPUS RAM DISK uefi|bios 3d|basic up|down LABEL SOURCE ARGS..."
     local name="$1"
     valid_name "$name" || die "VM names may use letters, digits, dot, dash and underscore."
     v dominfo "$name" >/dev/null 2>&1 && die "A VM called $name already exists."
     [[ -f "$job_dir/$name.json" ]] && die "$name is already being created."
     [[ "$2$3$4" =~ ^[0-9]+$ ]] || die "CPU, memory and disk must be numbers."
+    [[ "$7" == up || "$7" == down ]] || die "Network must be up or down."
     : >"$job_dir/$name.log"
     # Written here as well as by the job, so the VM appears in the list at once.
-    job_name="$name" job_label="$7"
+    job_name="$name" job_label="$8"
     write_status queued 0 "Starting"
     # Detached so the window can close while a multi-gigabyte download runs.
     setsid -f "$0" _job "$@" >/dev/null 2>&1
@@ -346,11 +382,12 @@ case "$action" in
     details) setsid -f virt-manager --connect "$uri" --show-domain-editor "$1" >/dev/null 2>&1 ;;
     manager) setsid -f virt-manager --connect "$uri" >/dev/null 2>&1 ;;
     delete) cmd_delete "$1" ;;
+    net) cmd_net "$1" "${2:-}" ;;
     create) cmd_create "$@" ;;
     _job)
-        job_name="$1" job_label="$7"
+        job_name="$1" job_label="$8"
         write_status queued 0 "Starting"
-        run_job "$2" "$3" "$4" "$5" "$6" "${@:8}"
+        run_job "$2" "$3" "$4" "$5" "$6" "$7" "${@:9}"
         ;;
     cancel) cmd_cancel "$1" ;;
     dismiss) rm -f -- "$job_dir/$1.json" "$job_dir/$1.log" ;;

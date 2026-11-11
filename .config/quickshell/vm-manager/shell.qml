@@ -735,6 +735,16 @@ FloatingWindow {
                                 Row {
                                     spacing: 8
 
+                                    // Plugs or unplugs the virtual network cable,
+                                    // live if the VM is running.
+                                    Btn {
+                                        readonly property bool online: vmCard.modelData.network === "up"
+                                        visible: vmCard.modelData.network !== "none"
+                                        icon: online ? "󰈀" : "󰈂"
+                                        text: online ? "" : "Offline"
+                                        onClicked: root.run(["net", vmCard.modelData.name, online ? "down" : "up"])
+                                    }
+
                                     Btn {
                                         visible: vmCard.running
                                         primary: true
@@ -822,6 +832,7 @@ FloatingWindow {
             property int diskGiB: 30
             property string firmware: "uefi"
             property string graphics: "3d"       // 3d | basic
+            property string network: "up"        // up | down: virtual cable plugged in at first boot
 
             readonly property var osList: {
                 const seen = {}
@@ -892,6 +903,8 @@ FloatingWindow {
                 diskGiB = windows ? 80 : 30
                 // Windows has no virgl driver; everything else benefits from 3D.
                 graphics = windows ? "basic" : "3d"
+                // Offline Windows setup is what offers a local account.
+                network = windows ? "down" : "up"
             }
 
             function pickOs(o) {
@@ -915,7 +928,7 @@ FloatingWindow {
             function create() {
                 if (!ready) return
                 const common = [vmName, String(cpus), String(memGiB * 1024), String(diskGiB), firmware,
-                                isWindows ? "basic" : graphics]
+                                isWindows ? "basic" : graphics, network]
                 if (mode === "download") {
                     const label = [selName, selRelease, selEdition].filter(s => s).join(" ")
                     root.run(["create"].concat(common, [label, "quickget", selOs, selRelease], selEdition ? [selEdition] : []))
@@ -1281,11 +1294,35 @@ FloatingWindow {
                             font.pixelSize: 12
                         }
 
+                        SectionLabel { text: "Network" }
+                        Row {
+                            spacing: 6
+                            Chip {
+                                text: "Connected"
+                                selected: creator.network === "up"
+                                onClicked: creator.network = "up"
+                            }
+                            Chip {
+                                text: "Unplugged"
+                                selected: creator.network === "down"
+                                onClicked: creator.network = "down"
+                            }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.Wrap
+                            text: creator.network === "down"
+                                ? "The VM boots with its network cable unplugged (the download still uses this PC's connection). Plug it back in from the VM list once setup is done."
+                                : "The VM is online from the first boot. You can unplug it any time from the VM list."
+                            color: Theme.muted
+                            font.pixelSize: 12
+                        }
+
                         Text {
                             visible: creator.isWindows && creator.mode === "download"
                             Layout.fillWidth: true
                             wrapMode: Text.Wrap
-                            text: "Windows is downloaded directly from Microsoft (about 6 GB). Install it without a network if you want a local account."
+                            text: "Windows is downloaded directly from Microsoft (about 6 GB)."
                             color: Theme.muted
                             font.pixelSize: 12
                         }
