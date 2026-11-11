@@ -85,6 +85,10 @@ apply_refresh() {
     local name resolution position scale
 
     IFS=$'\t' read -r name resolution position scale < <(internal_monitor) || return
+    # Leave a panel that lid.sh switched off (clamshell mode) off.
+    hyprctl -j monitors all 2>/dev/null \
+        | jq -e --arg name "$name" 'any(.[]; .name == $name and .disabled == true)' >/dev/null \
+        && return 0
     [[ -n "${name:-}" && -n "${resolution:-}" ]] || return
     [[ "$name" =~ ^[A-Za-z0-9._:-]+$ ]] || return
     [[ "$resolution" =~ ^[0-9]+x[0-9]+$ ]] || return
@@ -107,6 +111,11 @@ flock -n 9 || exit 0
 
 # A machine with no mains supply is a desktop; there is nothing to switch.
 has_mains || exit 0
+
+# lid.sh sends USR1 after it turns the panel back on (a config reload restores
+# machine.lua's refresh rate); forgetting the last state re-applies ours.
+printf '%s\n' "$$" >"${XDG_RUNTIME_DIR:-/tmp}/hypr-power-watch.pid"
+trap 'last_state=""' USR1
 
 # Switch the panel to match the charger. Sets `pending` when the change could
 # not be applied yet, so the caller retries.

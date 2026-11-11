@@ -394,7 +394,11 @@ PanelWindow {
                     workingDirectory: row.app.workingDirectory,
                 })
             else
-                row.app.execute()
+                // Through uwsm-app so the app gets its own scope in app.slice
+                // (systemd-oomd's kill candidates) rather than living in
+                // Quickshell's cgroup inside the compositor service.
+                Quickshell.execDetached(["uwsm-app", "--",
+                    row.app.id.endsWith(".desktop") ? row.app.id : row.app.id + ".desktop"])
             return root.closeRequested()
         }
         const e = row.entry

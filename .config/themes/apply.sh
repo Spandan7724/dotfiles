@@ -114,5 +114,8 @@ if command -v emacsclient >/dev/null 2>&1 && timeout 2 emacsclient -a false -e t
         t)' >/dev/null 2>&1 || true
 fi
 
+# Login screen and boot splash, in the background (needs system/setup-extras.sh).
+"$themes_root/boot-theme.sh"
+
 printf 'Applied theme: %s\n' "$theme"
 printf 'GTK, Qt, Thunar, and btop windows that are already open pick the theme up when reopened.\n'

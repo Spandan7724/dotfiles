@@ -1,0 +1,13 @@
+[Unit]
+Description=Notify about crashed programs (core dumps)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.config/hypr/scripts/crash-watch.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

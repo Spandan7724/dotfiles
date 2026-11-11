@@ -19,3 +19,10 @@ efibootmgr
 # Compressed RAM swap
 zram-generator
 
+
+# Snapshots, boot splash (system/setup-extras.sh)
+snapper
+snap-pac
+grub-btrfs
+inotify-tools
+plymouth

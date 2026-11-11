@@ -23,15 +23,23 @@ local function launch(command)
     return hl.dsp.exec_cmd(command)
 end
 
+-- Apps go through uwsm-app so each gets its own scope in app.slice. That is
+-- the slice systemd-oomd may kill from (systemd/user/app.slice.d), so a
+-- runaway app is stopped instead of the whole Hyprland session, which lives
+-- in session.slice. Quick one-shot commands keep using launch().
+local function app(command)
+    return hl.dsp.exec_cmd("uwsm-app -- " .. command)
+end
+
 -- Launchers and desktop panels
 section("Apps")
-bind(mainMod .. " + T", launch(scripts .. "/default-launcher.sh terminal"), "Open default terminal")
+bind(mainMod .. " + T", app(scripts .. "/default-launcher.sh terminal"), "Open default terminal")
 bind(mainMod .. " + D", launch(scripts .. "/apps-menu.sh"), "Open applications menu")
 bind("ALT + Space", launch("vicinae toggle"), "Open launcher (apps, files, calculator, clipboard)")
-bind(mainMod .. " + E", launch(scripts .. "/default-launcher.sh file-manager"), "Open default file manager")
-bind(mainMod .. " + SHIFT + N", launch(scripts .. "/default-launcher.sh notes"), "Open notes (default notes app)")
-bind(mainMod .. " + B", launch(scripts .. "/default-launcher.sh browser"), "Open default browser")
-bind(mainMod .. " + SHIFT + Return", launch('emacsclient -c -a ""'), "Open Doom Emacs")
+bind(mainMod .. " + E", app(scripts .. "/default-launcher.sh file-manager"), "Open default file manager")
+bind(mainMod .. " + SHIFT + N", app(scripts .. "/default-launcher.sh notes"), "Open notes (default notes app)")
+bind(mainMod .. " + B", app(scripts .. "/default-launcher.sh browser"), "Open default browser")
+bind(mainMod .. " + SHIFT + Return", app('emacsclient -c -a ""'), "Open Doom Emacs")
 section("Desktop")
 bind(mainMod .. " + ALT + X", launch(scripts .. "/control-center.sh"), "Open quick settings")
 bind(mainMod .. " + F1", launch(scripts .. "/keybinds.sh"), "Show keyboard shortcuts")
@@ -41,10 +49,10 @@ bind(mainMod .. " + Escape", launch(scripts .. "/desktop-menu.sh"), "Open deskto
 bind(mainMod .. " + slash", launch(scripts .. "/keybinds.sh"), "Search keyboard shortcuts")
 bind(mainMod .. " + SHIFT + slash", launch(scripts .. "/hyprmod-launch.sh"), "Open advanced Hyprland settings")
 section("Apps")
-bind(mainMod .. " + A", launch("pavucontrol"), "Open audio settings")
-bind(mainMod .. " + SHIFT + A", launch(scripts .. "/agent-launcher.sh"), "Start coding agent in a chosen folder")
-bind(mainMod .. " + CTRL + A", launch(scripts .. "/agent-launcher.sh --choose"), "Choose a coding agent, then a folder")
-bind(mainMod .. " + SHIFT + B", launch(terminal .. " --class dotfiles-btop -e btop"), "Open system monitor")
+bind(mainMod .. " + A", app("pavucontrol"), "Open audio settings")
+bind(mainMod .. " + SHIFT + A", app(scripts .. "/agent-launcher.sh"), "Start coding agent in a chosen folder")
+bind(mainMod .. " + CTRL + A", app(scripts .. "/agent-launcher.sh --choose"), "Choose a coding agent, then a folder")
+bind(mainMod .. " + SHIFT + B", app(terminal .. " --class dotfiles-btop -e btop"), "Open system monitor")
 section("Tools")
 bind(mainMod .. " + SHIFT + D", launch(scripts .. "/web-search.sh"), "Search the web")
 bind(mainMod .. " + equal", launch(scripts .. "/calculator.sh"), "Open calculator")
@@ -278,7 +286,7 @@ bind(mainMod .. " + ALT + S", hl.dsp.window.move({ workspace = "special:scratchp
 bind(mainMod .. " + I", hl.dsp.workspace.toggle_special("scratchpad2"), "Toggle second scratchpad")
 bind(mainMod .. " + ALT + I", hl.dsp.window.move({ workspace = "special:scratchpad2", follow = false }), "Send window to second scratchpad")
 section("Apps")
-bind(mainMod .. " + Return", launch("kitty --class dropdown-terminal"), "Open dropdown terminal")
+bind(mainMod .. " + Return", app("kitty --class dropdown-terminal"), "Open dropdown terminal")
 bind(mainMod .. " + H", hl.dsp.workspace.toggle_special("ncspot"), "Toggle music player scratchpad")
 
 -- Monitor navigation. Relative monitor selectors follow monitor order.
@@ -356,7 +364,7 @@ bind(mainMod .. " + CTRL + P", launch(scripts .. "/package-manager.sh"), "Open p
 section("Desktop")
 bind(mainMod .. " + CTRL + D", launch(scripts .. "/defaults-menu.sh"), "Choose default applications")
 section("Apps")
-bind(mainMod .. " + CTRL + E", launch(scripts .. "/default-launcher.sh editor"), "Open default code editor")
+bind(mainMod .. " + CTRL + E", app(scripts .. "/default-launcher.sh editor"), "Open default code editor")
 bind(mainMod .. " + CTRL + V", launch(scripts .. "/vm-manager.sh"), "Open virtual machine manager")
 section("Appearance")
 bind(mainMod .. " + W", launch("quickshell -n -c hyprquickpaper"), "Choose wallpaper")
@@ -389,6 +397,10 @@ bind(mainMod .. " + CTRL + SHIFT + N", launch("sh -c 'dunstctl close-all; dunstc
 
 -- Brightness, volume, microphone, and media keys
 section("Hardware keys")
+-- Lid: clamshell mode when an external display is connected (scripts/lid.sh).
+-- Bound directly, without a cheatsheet entry: it is a switch, not a key.
+hl.bind("switch:on:Lid Switch", launch(scripts .. "/lid.sh sync"), { locked = true })
+hl.bind("switch:off:Lid Switch", launch(scripts .. "/lid.sh sync"), { locked = true })
 bind("XF86MonBrightnessUp", launch("brightnessctl -e4 -n2 set 5%+"), "Increase brightness", { locked = true, repeating = true })
 bind("XF86MonBrightnessDown", launch("brightnessctl -e4 -n2 set 5%-"), "Decrease brightness", { locked = true, repeating = true })
 bind("XF86AudioRaiseVolume", launch("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"), "Increase volume", { locked = true, repeating = true })

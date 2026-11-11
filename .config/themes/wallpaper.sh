@@ -32,6 +32,8 @@ restore_theme_palette() {
     if [[ -f "$themes_root/current/quickshell.json" ]]; then
         cp -f -- "$themes_root/current/quickshell.json" "$config_root/quickshell/theme.json"
     fi
+    # The login screen uses the wallpaper too. apply.sh syncs it itself.
+    [[ -n "${DOTFILES_THEME_APPLY:-}" ]] || "$themes_root/boot-theme.sh"
 }
 trap restore_theme_palette EXIT
 

@@ -636,16 +636,18 @@
         "return-type": "json",
         "interval": 1800,
         "signal": 10,
-        "on-click": "kitty --class dotfiles-update -e bash -lc 'yay -Syu; read -rp \"Press Enter to close\"'"
+        "on-click": "kitty --class dotfiles-update -e bash -lc '~/.config/hypr/scripts/system-update.sh; read -rp \"Press Enter to close\"'"
     },
 
     "custom/nightlight": {
-        "exec": "~/.config/waybar/scripts/nightlight-status.sh",
+        "exec": "~/.config/waybar/scripts/nightlight.sh status",
         "return-type": "json",
-        // Refreshed by scripts/toggle-gammastep (signal 12).
+        // Refreshed by scripts/nightlight.sh (signal 12).
         "signal": 12,
         "interval": 60,
-        "on-click": "~/.config/waybar/scripts/toggle-gammastep"
+        "on-click": "~/.config/waybar/scripts/nightlight.sh toggle",
+        "on-scroll-up": "~/.config/waybar/scripts/nightlight.sh cooler",
+        "on-scroll-down": "~/.config/waybar/scripts/nightlight.sh warmer"
     },
 
     "idle_inhibitor": {

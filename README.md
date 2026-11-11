@@ -18,7 +18,9 @@ wallpaper-derived colors.
 - Graphical editor: Zed
 - Terminal editors: Helix and Neovim with NvChad
 - Emacs: Doom Emacs
-- Login screen: SDDM with the SilentSDDM theme (nord variant)
+- Login screen: SDDM with the SilentSDDM theme, in the desktop theme's colours
+- Boot splash: Plymouth, in the desktop theme's colours
+- Snapshots: Snapper + snap-pac around every pacman transaction, bootable from GRUB via grub-btrfs
 - Shells: Fish and Zsh
 - Prompt: Starship
 
@@ -76,7 +78,9 @@ the dotfiles, configures graphics, installs the wallpapers, enables
 NetworkManager, Bluetooth, PipeWire, firewalld, and CUPS, configures the SDDM
 login screen and zram, configures power management, sets Zen as the default
 browser and applies the initial theme (Wallpaper Dark), installs
-reboot-to-Windows on dual-boot machines, sets up the Rust toolchain, installs
+reboot-to-Windows on dual-boot machines, runs `system/setup-extras.sh`
+(Snapper snapshots, grub-btrfs, systemd-oomd, zram sized to RAM,
+systemd-resolved, Plymouth and the themed login screen), sets up the Rust toolchain, installs
 Doom Emacs, then verifies the result and prints a summary. HyprMod provides a graphical editor for Hyprland settings and
 shortcuts.
 
@@ -88,6 +92,9 @@ and rerun it.
 Nothing in the repository is needed at runtime — the deployment model is a
 copy, so the desktop keeps working if the clone is deleted. Keep it anyway:
 rerunning the installer is how you apply updates.
+
+`system/setup-extras.sh` can also be run on its own on an existing install;
+every step is idempotent.
 
 ### Rerunning
 

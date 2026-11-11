@@ -754,6 +754,14 @@ configure_services() {
         fi
     fi
 
+    # Crash notifications start with the graphical session.
+    if systemctl --user list-unit-files dotfiles-crash-watch.service >/dev/null 2>&1; then
+        if ! systemctl --user enable dotfiles-crash-watch.service; then
+            warning "The crash notification service could not be enabled."
+            ((INSTALL_FAILURES += 1))
+        fi
+    fi
+
     # Vicinae starts with the graphical session, so it is enabled but not
     # started here. Its script commands mirror the desktop menu (menu.json).
     if systemctl --user list-unit-files vicinae.service >/dev/null 2>&1; then
@@ -880,6 +888,16 @@ configure_power() {
         # a runtime-PM udev rule. Forcing 0x02 here would add risk
         # without adding capability; verify_power reports the live state instead.
         info "NVIDIA runtime power management left at the driver default (fine-grained on this GPU generation)."
+    fi
+}
+
+configure_system_extras() {
+    # Snapper/grub-btrfs, systemd-oomd, zram, resolved, Plymouth and the
+    # themed login screen. Kept as its own script so an existing install can
+    # run just this part.
+    if ! "$REPO_DIR/system/setup-extras.sh"; then
+        warning "system/setup-extras.sh did not finish; run it again by hand."
+        ((INSTALL_FAILURES += 1))
     fi
 }
 
@@ -1265,6 +1283,7 @@ main() {
         "Configuring power management:configure_power"
         "Configuring the desktop:configure_desktop"
         "Setting up reboot-to-Windows:configure_windows_reboot"
+        "Snapshots, OOM, DNS and boot theme:configure_system_extras"
         "Setting up development tools:setup_development_tools"
         "Installing NvChad:setup_nvchad"
         "Installing Doom Emacs:setup_doom_emacs"

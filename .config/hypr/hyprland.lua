@@ -31,6 +31,13 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("sh -c 'sleep 1; ~/.config/themes/restore.sh'")
     hl.exec_cmd("sh -c 'sleep 2; ~/.config/hypr/scripts/detect-display.sh'")
     hl.exec_cmd("sh -c 'sleep 3; ~/.config/hypr/scripts/power-watch.sh'")
+    hl.exec_cmd("sh -c 'sleep 3; ~/.config/hypr/scripts/lid.sh watch'")
+    hl.exec_cmd("~/.config/hypr/scripts/battery-watch.sh")
+    -- Mount USB drives as they are plugged in (no tray icon, no popups).
+    hl.exec_cmd("sh -c 'command -v udiskie >/dev/null && exec udiskie --automount --no-notify --no-tray'")
+    -- Night light daemon. hyprsunset.conf keeps the screen untouched until
+    -- waybar/scripts/nightlight.sh turns it on.
+    hl.exec_cmd("sh -c 'command -v hyprsunset >/dev/null && exec hyprsunset'")
 end)
 
 ---- ENVIRONMENT VARIABLES ----
@@ -137,6 +144,9 @@ hl.config({
         preserve_split = true,
         smart_resizing = true,
         precise_mouse_move = true,
+        -- New windows always split to the right or bottom, instead of
+        -- following the mouse.
+        force_split = 2,
     },
 })
 hl.config({
@@ -148,6 +158,26 @@ hl.config({
     misc = {
         disable_hyprland_logo = true,
         disable_splash_rendering = true,
+        disable_scale_notification = true,
+        -- Apps that ask for focus (a link opened from the terminal) get it.
+        focus_on_activate = true,
+        -- Wait for three missed pings before "Application not responding".
+        anr_missed_pings = 3,
+        -- Opening or focusing a window behind a fullscreen one brings it forward.
+        on_focus_under_fullscreen = 1,
+        -- If hyprlock crashes, a new hyprlock can take the lock back over
+        -- instead of leaving the red "lockscreen died" screen.
+        allow_session_lock_restore = true,
+        -- No chime on every terminal bell. Guarded for a compositor that
+        -- predates the option.
+        bell_sound = hl.get_config("misc.bell_sound") ~= nil and "none" or nil,
+    },
+    cursor = {
+        warp_on_change_workspace = 1,
+    },
+    binds = {
+        -- Switching workspace closes an open scratchpad.
+        hide_special_on_workspace_change = true,
     },
 })
 

@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Apply the desktop theme to the boot splash (Plymouth) and the login screen
+# (SilentSDDM). Installed as /usr/local/libexec/dotfiles-boot-theme-root and
+# run by ~/.config/themes/boot-theme.sh through a NOPASSWD sudo rule, so every
+# argument is untrusted and validated here:
+#
+#   dotfiles-boot-theme-root <background> <foreground> <accent> <surface> \
+#       <muted> <error> <on-accent> [wallpaper]
+#
+# Colours must be #rrggbb. The wallpaper is read as the invoking user, never as
+# root, so a symlink cannot make this copy a file the user cannot read, and it
+# is only used when it really is an image.
+
+set -euo pipefail
+
+usage() {
+    printf 'Usage: %s <bg> <fg> <accent> <surface> <muted> <error> <on-accent> [wallpaper]\n' "$0" >&2
+    exit 2
+}
+
+(($# == 7 || $# == 8)) || usage
+for colour in "${@:1:7}"; do
+    [[ "$colour" =~ ^#[0-9a-fA-F]{6}$ ]] || usage
+done
+bg="$1" fg="$2" accent="$3" surface="$4" muted="$5" error="$6" on_accent="$7"
+wallpaper="${8:-}"
+
+caller="${SUDO_USER:-}"
+[[ -n "$caller" && "$caller" != root ]] || { printf 'Run through sudo as a regular user.\n' >&2; exit 2; }
+
+state_dir=/var/lib/dotfiles-boot-theme
+install -d -m 755 "$state_dir"
+
+# ---- SDDM (SilentSDDM) -------------------------------------------------------
+
+sddm_theme=/usr/share/sddm/themes/silent
+if [[ -d "$sddm_theme/configs" && -f "$sddm_theme/configs/nord.conf" ]]; then
+    background_line=""
+    if [[ -n "$wallpaper" ]]; then
+        tmp="$(mktemp)"
+        # Read as the caller, size-capped, then check the content is an image.
+        if runuser -u "$caller" -- head -c 64M -- "$wallpaper" >"$tmp" 2>/dev/null; then
+            case "$(file --brief --mime-type -- "$tmp")" in
+                image/jpeg) ext=jpg ;;
+                image/png) ext=png ;;
+                image/webp) ext=webp ;;
+                image/gif) ext=gif ;;
+                *) ext="" ;;
+            esac
+            if [[ -n "$ext" ]]; then
+                rm -f "$sddm_theme"/backgrounds/dotfiles-wallpaper.*
+                install -m 644 "$tmp" "$sddm_theme/backgrounds/dotfiles-wallpaper.$ext"
+                background_line="dotfiles-wallpaper.$ext"
+            fi
+        fi
+        rm -f "$tmp"
+    fi
+
+    # nord.conf is the hand-tuned layout; only its colours (and background)
+    # are swapped for the theme's.
+    sed -e "s/#1f232b/$bg/Ig" \
+        -e "s/#d8dee9/$fg/Ig" \
+        -e "s/#81a1c1/$accent/Ig" \
+        -e "s/#242933/$surface/Ig" \
+        -e "s/#2b303b/$surface/Ig" \
+        -e "s/#ebcb8b/$muted/Ig" \
+        -e "s/#bf616a/$error/Ig" \
+        -e "s/active-content-color = \"$bg\"/active-content-color = \"$on_accent\"/g" \
+        "$sddm_theme/configs/nord.conf" >"$state_dir/sddm.conf.new"
+    if [[ -n "$background_line" ]]; then
+        sed -i -E "s|^background = \".*\"|background = \"$background_line\"|" "$state_dir/sddm.conf.new"
+    fi
+    install -m 644 "$state_dir/sddm.conf.new" "$sddm_theme/configs/dotfiles.conf"
+    rm -f "$state_dir/sddm.conf.new"
+    sed -i -E -e 's|^ConfigFile=|# ConfigFile=|' "$sddm_theme/metadata.desktop"
+    grep -q '^ConfigFile=configs/dotfiles.conf$' "$sddm_theme/metadata.desktop" \
+        || printf 'ConfigFile=configs/dotfiles.conf\n' >>"$sddm_theme/metadata.desktop"
+fi
+
+# ---- Plymouth ----------------------------------------------------------------
+
+# The splash lives in the initramfs, so a colour change means rebuilding it.
+# Only do that when the splash colours actually changed.
+if command -v plymouth-set-default-theme >/dev/null 2>&1 \
+    && [[ -f /usr/share/plymouth/themes/spinner/spinner.plymouth ]]; then
+    hex() { printf '0x%s' "${1#\#}"; }
+    signature="$bg $fg $accent"
+    if [[ "$(cat "$state_dir/plymouth.signature" 2>/dev/null)" != "$signature" \
+        || "$(plymouth-set-default-theme)" != dotfiles ]]; then
+        theme_dir=/usr/share/plymouth/themes/dotfiles
+        install -d -m 755 "$theme_dir"
+        sed -E \
+            -e 's|^Name=.*|Name=Dotfiles|' \
+            -e 's|^Description=.*|Description=Spinner in the colours of the desktop theme|' \
+            -e 's|^ImageDir=.*|ImageDir=/usr/share/plymouth/themes/spinner|' \
+            -e "s|^BackgroundStartColor=.*|BackgroundStartColor=$(hex "$bg")|" \
+            -e "s|^BackgroundEndColor=.*|BackgroundEndColor=$(hex "$bg")|" \
+            -e "s|^ProgressBarBackgroundColor=.*|ProgressBarBackgroundColor=$(hex "$surface")|" \
+            -e "s|^ProgressBarForegroundColor=.*|ProgressBarForegroundColor=$(hex "$accent")|" \
+            -e 's|^UseFirmwareBackground=.*|UseFirmwareBackground=false|' \
+            /usr/share/plymouth/themes/spinner/spinner.plymouth >"$theme_dir/dotfiles.plymouth.new"
+        mv -f "$theme_dir/dotfiles.plymouth.new" "$theme_dir/dotfiles.plymouth"
+        plymouth-set-default-theme -R dotfiles
+        printf '%s\n' "$signature" >"$state_dir/plymouth.signature"
+    fi
+fi

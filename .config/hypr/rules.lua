@@ -77,6 +77,24 @@ hl.window_rule({
     float = true,
 })
 
+-- The desktop portal only ever shows dialogs (file pickers, screen-share and
+-- permission prompts), so all of its windows float, whatever the app that
+-- asked titled them.
+hl.window_rule({
+    name = "float-portal-dialogs",
+    match = { class = "^(xdg-desktop-portal-gtk|xdg-desktop-portal-kde|org.freedesktop.impl.portal.desktop.kde)$" },
+    float = true,
+    center = true,
+})
+
+-- Browsers' "… is sharing your screen" bars are moved out of sight onto a
+-- silent special workspace.
+hl.window_rule({
+    name = "hide-sharing-indicator",
+    match = { title = "^(.*is sharing (your screen|a window|a tab).*)$" },
+    workspace = "special:sharing silent",
+})
+
 hl.window_rule({
     name = "picture-in-picture",
     match = { title = "^([Pp]icture[- ]in[- ][Pp]icture)$" },

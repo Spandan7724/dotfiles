@@ -14,7 +14,7 @@ remove_packages() {
 case "${1:-}" in
     --install) install_packages ;;
     --remove) remove_packages ;;
-    --update) yay -Syu ;;
+    --update) "$HOME/.config/hypr/scripts/system-update.sh" ;;
     --orphans)
         mapfile -t packages < <(pacman -Qdtq 2>/dev/null || true)
         if ((${#packages[@]})); then sudo pacman -Rns "${packages[@]}"; else printf 'No orphaned packages.\n'; fi ;;
@@ -23,7 +23,7 @@ case "${1:-}" in
         selection="$({
             printf 'Install packages\tSearch the repositories and pick several\t\U000f03d6\t--install\n'
             printf 'Remove packages\tExplicitly installed packages and their dependencies\t\U000f01b4\t--remove\n'
-            printf 'Update the system\tRepositories and AUR, through yay\t\U000f06b0\t--update\n'
+            printf 'Update the system\tRepositories and AUR, with snapshots and clean-up\t\U000f06b0\t--update\n'
             printf 'Remove orphaned packages\tDependencies nothing needs any more\t\U000f00e2\t--orphans\n'
         } | "$HOME/.config/hypr/scripts/menu-select" -no-custom -p 'Packages' \
             -display-columns 1 -detail-column 2 -icon-column 3)" || exit 0
