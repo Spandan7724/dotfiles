@@ -23,7 +23,8 @@ current_temp() {
     hyprctl hyprsunset temperature 2>/dev/null | grep -oE '[0-9]+' | head -n1
 }
 
-# hyprsunset reports 6000 K and up as off: identity resets it to 6500 K.
+# Off is 6500 K plus the identity matrix (see turn_off), so anything below
+# 6000 K counts as on.
 is_on() {
     local temp
     temp="$(current_temp)"
@@ -48,6 +49,13 @@ set_temp() {
     hyprctl hyprsunset temperature "$temp" >/dev/null 2>&1
 }
 
+# identity alone clears the tint but leaves the reported temperature where it
+# was, so set 6500 K first or the next status check still reads "on".
+turn_off() {
+    hyprctl hyprsunset temperature 6500 >/dev/null 2>&1
+    hyprctl hyprsunset identity >/dev/null 2>&1
+}
+
 refresh_bar() { pkill -RTMIN+12 -x waybar 2>/dev/null || true; }
 
 case "${1:-status}" in
@@ -60,11 +68,11 @@ case "${1:-status}" in
         exit 0
         ;;
     on) ensure_running && set_temp "$(saved_temp)" ;;
-    off) ensure_running && hyprctl hyprsunset identity >/dev/null 2>&1 ;;
+    off) ensure_running && turn_off ;;
     toggle)
         ensure_running || exit 1
         if is_on; then
-            hyprctl hyprsunset identity >/dev/null 2>&1
+            turn_off
         else
             set_temp "$(saved_temp)"
         fi
