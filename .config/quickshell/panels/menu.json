@@ -12,7 +12,7 @@
         { "id": "power", "icon": "󰐥", "label": "Power", "description": "Lock, suspend, log out, restart or shut down", "keywords": "session lock suspend sleep hibernate logout log out restart reboot shutdown shut down poweroff windows firmware", "action": "$scripts/power-menu.sh" },
 
         { "id": "capture.shot", "icon": "󰹑", "label": "Screenshot", "description": "Region, window, full screen, delayed or annotated", "keywords": "screenshot picture grab snip print screen" },
-        { "id": "capture.record", "icon": "󰑊", "label": "Screen recording", "description": "Start or stop recording a region", "keywords": "record video capture mp4 screencast movie", "action": "$scripts/record-toggle.sh", "when": "command -v wf-recorder", "state": "pgrep -x wf-recorder" },
+        { "id": "capture.record", "icon": "󰑊", "label": "Screen recording", "description": "Start or stop recording a region", "keywords": "record video capture mp4 screencast movie", "action": "$scripts/record-toggle.sh", "when": "command -v gpu-screen-recorder || command -v wf-recorder", "state": "pgrep -x gpu-screen-reco || pgrep -x wf-recorder" },
         { "id": "capture.ocr", "icon": "󰴑", "label": "Copy text", "description": "Read the text in a region and copy it", "keywords": "ocr scan read copy text from screen tesseract", "action": "$scripts/screenshot.sh ocr", "when": "command -v tesseract" },
         { "id": "capture.colour", "icon": "󰃉", "label": "Pick colour", "description": "Copy the hex value of any pixel", "keywords": "color picker eyedropper hex hyprpicker swatch", "action": "$scripts/color-picker.sh", "when": "command -v hyprpicker" },
 

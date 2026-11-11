@@ -774,7 +774,9 @@ configure_services() {
     fi
 
     local unit
-    for unit in firewalld.service cups.service; do
+    # linux-modules-cleanup (kernel-modules-hook) removes the old kernel's
+    # modules at boot, once nothing can still be running on them.
+    for unit in firewalld.service cups.service linux-modules-cleanup.service; do
         systemctl list-unit-files "$unit" >/dev/null 2>&1 || continue
         if ! sudo systemctl enable --now "$unit"; then
             warning "$unit could not be enabled."

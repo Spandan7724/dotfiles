@@ -26,3 +26,10 @@ snap-pac
 grub-btrfs
 inotify-tools
 plymouth
+
+# Manuals, CLI helpers, and modules kept for the running kernel after upgrades
+man-db
+man-pages
+bat
+tealdeer
+kernel-modules-hook

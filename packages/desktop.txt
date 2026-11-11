@@ -38,6 +38,7 @@ awww
 matugen
 grim
 slurp
+gpu-screen-recorder
 wf-recorder
 swappy
 hyprpicker
@@ -70,6 +71,10 @@ thunar
 tumbler
 ffmpegthumbnailer
 gvfs
+gvfs-mtp
+gvfs-smb
+webp-pixbuf-loader
+gnome-disk-utility
 thunar-volman
 papirus-icon-theme
 papirus-folders

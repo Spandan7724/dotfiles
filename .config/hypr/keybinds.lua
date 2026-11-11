@@ -37,6 +37,8 @@ bind(mainMod .. " + T", app(scripts .. "/default-launcher.sh terminal"), "Open d
 bind(mainMod .. " + D", launch(scripts .. "/apps-menu.sh"), "Open applications menu")
 bind("ALT + Space", launch("vicinae toggle"), "Open launcher (apps, files, calculator, clipboard)")
 bind(mainMod .. " + E", app(scripts .. "/default-launcher.sh file-manager"), "Open default file manager")
+bind(mainMod .. " + ALT + T", app(scripts .. "/open-here.sh terminal"), "Open terminal in the focused terminal's folder")
+bind(mainMod .. " + ALT + E", app(scripts .. "/open-here.sh file-manager"), "Open file manager in the focused terminal's folder")
 bind(mainMod .. " + SHIFT + N", app(scripts .. "/default-launcher.sh notes"), "Open notes (default notes app)")
 bind(mainMod .. " + B", app(scripts .. "/default-launcher.sh browser"), "Open default browser")
 bind(mainMod .. " + SHIFT + Return", app('emacsclient -c -a ""'), "Open Doom Emacs")
