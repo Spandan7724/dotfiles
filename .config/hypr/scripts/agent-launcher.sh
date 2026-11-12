@@ -112,4 +112,12 @@ fi
 # The -c string is plain enough for bash, zsh, and fish alike.
 shell="${SHELL:-/bin/bash}"
 cd -- "$dir"
-exec "$scripts/default-launcher.sh" terminal -e "$shell" -c "$agent; exec $shell"
+# Ghostty and kitty can hand the window to an already running instance, which
+# ignores this script's working directory, so they get the folder explicitly.
+terminal="$(cat "$state_dir/terminal" 2>/dev/null || echo kitty)"
+case "${terminal##*/}" in
+    ghostty | alacritty | foot) dir_args=("--working-directory=$dir") ;;
+    kitty) dir_args=(--directory "$dir") ;;
+    *) dir_args=() ;;
+esac
+exec "$scripts/default-launcher.sh" terminal "${dir_args[@]}" -e "$shell" -c "$agent; exec $shell"
