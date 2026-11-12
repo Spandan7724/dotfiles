@@ -20,7 +20,8 @@ PanelWindow {
     implicitHeight: 120
     color: "transparent"
 
-    exclusionMode: ExclusionMode.Ignore
+    // Respect waybar's exclusive zone so the OSD always sits below the bar
+    exclusionMode: ExclusionMode.Normal
 
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -98,28 +99,38 @@ PanelWindow {
     Rectangle {
         id: flyout
 
-        width: 320
-        height: 28
+        width: 300
+        height: 34
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        anchors.topMargin: 30
+        anchors.topMargin: root.showing ? 8 : 0
 
-        radius: 36
+        // Match waybar's pill styling
+        radius: 11
         color: theme.surface
+        border.width: 1
+        border.color: Qt.rgba(theme.foreground.r, theme.foreground.g, theme.foreground.b, 0.10)
 
         opacity: root.showing ? 1 : 0
-        scale: root.showing ? 1 : 0.9
+        scale: root.showing ? 1 : 0.96
 
         Behavior on opacity {
             NumberAnimation {
-                duration: 150
+                duration: 160
             }
         }
 
         Behavior on scale {
             NumberAnimation {
-                duration: 150
+                duration: 180
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        Behavior on anchors.topMargin {
+            NumberAnimation {
+                duration: 180
                 easing.type: Easing.OutCubic
             }
         }
@@ -128,7 +139,7 @@ PanelWindow {
             id: icon
 
             anchors.left: parent.left
-            anchors.leftMargin: 20
+            anchors.leftMargin: 14
             anchors.verticalCenter: parent.verticalCenter
 
             text: {
@@ -145,37 +156,43 @@ PanelWindow {
             }
 
             font.family: "Symbols Nerd Font"
-            font.pixelSize: 20
+            font.pixelSize: 17
 
             color: root.muted ? theme.muted : theme.primary
         }
 
         Text {
+            id: label
+
             anchors.right: parent.right
-            anchors.rightMargin: 20
+            anchors.rightMargin: 14
             anchors.verticalCenter: parent.verticalCenter
 
             text: root.muted
                 ? "Muted"
                 : Math.round(root.volume * 100) + "%"
 
-            font.pixelSize: 12
-            font.bold: true
+            width: 38
+            horizontalAlignment: Text.AlignRight
+
+            font.family: "JetBrainsMono Nerd Font"
+            font.pixelSize: 11
+            font.weight: Font.DemiBold
 
             color: theme.foreground
         }
 
         Rectangle {
             anchors.left: icon.right
-            anchors.leftMargin: 15
+            anchors.leftMargin: 12
 
-            anchors.right: parent.right
-            anchors.rightMargin: 68
+            anchors.right: label.left
+            anchors.rightMargin: 10
 
             anchors.verticalCenter: parent.verticalCenter
 
-            height: 5
-            radius: 4
+            height: 4
+            radius: 2
 
             color: theme.surfaceVariant
 
@@ -185,7 +202,7 @@ PanelWindow {
                     : parent.width * Math.min(root.volume, 1)
 
                 height: parent.height
-                radius: 4
+                radius: 2
 
                 color: theme.primary
 
