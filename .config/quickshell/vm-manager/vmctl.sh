@@ -243,6 +243,11 @@ download_iso() { # download_iso OS RELEASE EDITION VOLUME
         done
     ((PIPESTATUS[0] == 0)) || fail "The download failed. See $job_dir/$job_name.log"
     iso="$(find "$dir" -maxdepth 1 -type f -iname '*.iso' -print -quit)"
+    # quickget exits 0 even when Microsoft refuses the download, so its log is
+    # the only place the real reason shows up.
+    if [[ -z "$iso" ]] && grep -q 'Microsoft blocked' "$job_dir/$job_name.log"; then
+        fail "Microsoft blocked the automated download from your IP address. Download the ISO in a browser from microsoft.com/software-download, then use \"Use an ISO\"."
+    fi
     [[ -n "$iso" ]] || fail "This OS is not distributed as an ISO, so it cannot be installed this way."
     import_iso "$iso" "$volume" || fail "Could not copy the ISO into the $iso_pool pool."
     rm -rf -- "$dir"
