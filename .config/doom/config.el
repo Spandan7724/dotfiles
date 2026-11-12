@@ -113,3 +113,80 @@
 (add-hook 'delete-frame-functions #'dotfiles/save-notes)
 (add-hook 'kill-emacs-hook #'dotfiles/save-notes)
 (add-function :after after-focus-change-function #'dotfiles/save-notes)
+
+;; Notepad-style notes in ~/notes: a note is named after its first line
+;; (renamed on every save, so the name follows the text), and a note with
+;; nothing in it is never written -- if one already exists on disk and you
+;; clear it, it goes to the trash. New notes start blank instead of getting
+;; the Markdown "# Document Title" file template.
+(defvar dotfiles/notes-dir "~/notes/")
+(defvar dotfiles/note-title-max-length 50)
+
+(defun dotfiles/notes-file-p ()
+  (and buffer-file-name
+       (file-equal-p (file-name-directory buffer-file-name)
+                     dotfiles/notes-dir)))
+
+(defun dotfiles/note-empty-p ()
+  "Non-nil if the note holds nothing but whitespace and bare Markdown markers."
+  (save-excursion
+    (goto-char (point-min))
+    (not (re-search-forward "[^][:space:]#>*+`~_=|-]" nil t))))
+
+(defun dotfiles/note-title ()
+  "Filename-safe title from the first non-blank line, or nil."
+  (save-excursion
+    (goto-char (point-min))
+    (when (re-search-forward "^[[:blank:]]*\\([^[:space:]].*\\)$" nil t)
+      (let ((title (match-string-no-properties 1)))
+        ;; Drop Markdown line markers: headings, quotes, bullets, task boxes.
+        (setq title (replace-regexp-in-string
+                     "\\`\\(?:[#>]+\\|[-*+]\\|[0-9]+[.)]\\)?[[:blank:]]*\\(?:\\[[ xX]?\\][[:blank:]]*\\)?"
+                     "" title))
+        (setq title (replace-regexp-in-string "[*_`~]+" "" title))
+        ;; Characters that are invalid or awkward in filenames.
+        (setq title (replace-regexp-in-string "[/\\\\:?\"<>|[:cntrl:]]+" " " title))
+        (setq title (string-trim (replace-regexp-in-string "[[:space:]]+" " " title)))
+        ;; Cap the length, cutting at a word boundary when possible.
+        (when (> (length title) dotfiles/note-title-max-length)
+          (setq title (substring title 0 dotfiles/note-title-max-length))
+          (when (string-match "\\`\\(.\\{10,\\}\\) [^ ]*\\'" title)
+            (setq title (match-string 1 title))))
+        (setq title (string-trim-right title "[ .]+"))
+        (setq title (string-trim-left title "[ .]+"))
+        (unless (string-empty-p title) title)))))
+
+(defun dotfiles/note-target-name (title)
+  "Path in the notes dir for TITLE that doesn't clash with another file."
+  (let* ((dir (file-name-directory buffer-file-name))
+         (ext (or (file-name-extension buffer-file-name t) ""))
+         (n 1)
+         (path (expand-file-name (concat title ext) dir)))
+    (while (and (file-exists-p path)
+                (not (file-equal-p path buffer-file-name)))
+      (setq n (1+ n)
+            path (expand-file-name (format "%s (%d)%s" title n ext) dir)))
+    path))
+
+(defun dotfiles/note-save-a (orig-fn &rest args)
+  "Don't write empty notes; trash an existing note once it's emptied."
+  (if (and (dotfiles/notes-file-p) (dotfiles/note-empty-p))
+      (progn
+        (when (file-exists-p buffer-file-name)
+          (move-file-to-trash buffer-file-name)
+          (message "Empty note moved to trash"))
+        (set-buffer-modified-p nil))
+    (apply orig-fn args)))
+(advice-add 'basic-save-buffer :around #'dotfiles/note-save-a)
+
+(defun dotfiles/note-rename-h ()
+  "After saving a note, rename it to match its first line."
+  (when-let* (((dotfiles/notes-file-p))
+              (title (dotfiles/note-title))
+              (new (dotfiles/note-target-name title))
+              ((not (string= new buffer-file-name))))
+    (rename-file buffer-file-name new)
+    (set-visited-file-name new t t)))
+(add-hook 'after-save-hook #'dotfiles/note-rename-h)
+
+(advice-add '+file-templates-check-h :before-until #'dotfiles/notes-file-p)
