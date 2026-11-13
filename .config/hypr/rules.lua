@@ -47,6 +47,14 @@ hl.window_rule({
     opacity = "1.0 override",
 })
 
+-- Keep Chrome rendering while it sits on a hidden workspace, so it doesn't
+-- freeze and then hitch when switched back to.
+hl.window_rule({
+    name = "render-unfocused-chrome",
+    match = { class = "^(google-chrome|Google-chrome)$" },
+    render_unfocused = true,
+})
+
 hl.window_rule({
     name = "float-pavucontrol",
     match = { class = "^(pavucontrol)$" },
