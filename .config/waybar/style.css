@@ -50,6 +50,7 @@ window#waybar {
 #custom-notifications,
 #custom-updates,
 #custom-dgpu,
+#custom-recording,
 #custom-media,
 #window,
 #clock,
@@ -177,6 +178,35 @@ window#waybar {
     padding-left: 8px;
     padding-right: 8px;
     font-size: 14px;
+}
+
+#custom-recording.recording {
+    color: @critical;
+}
+
+#custom-recording.paused {
+    color: @muted;
+}
+
+#custom-recording-pause,
+#custom-recording-stop {
+    min-width: 14px;
+    padding: 0 6px;
+    margin: 3px 1px;
+    border-radius: 8px;
+    color: @muted;
+    font-size: 14px;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+#custom-recording-stop {
+    color: @critical;
+}
+
+#custom-recording-pause:hover,
+#custom-recording-stop:hover {
+    color: @hover;
+    background: alpha(@foreground, 0.12);
 }
 
 #privacy-item.screenshare,

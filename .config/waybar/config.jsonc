@@ -21,6 +21,7 @@
     ],
     "modules-right": [
         "group/media",
+        "group/recording",
         "privacy",
         "custom/dgpu",
         "group/tray",
@@ -509,6 +510,31 @@
         "tooltip-format": "Microphone: {volume}%",
         "on-click": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
         "on-click-right": "pavucontrol -t 4"
+    },
+
+    // Shown only while hypr/scripts/record-toggle.sh is recording: the elapsed
+    // time, then pause/resume and stop buttons. scripts/recording.sh runs
+    // continuously for each and prints on change.
+    "group/recording": {
+        "orientation": "inherit",
+        "modules": ["custom/recording", "custom/recording-pause", "custom/recording-stop"]
+    },
+
+    "custom/recording": {
+        "exec": "~/.config/waybar/scripts/recording.sh",
+        "return-type": "json"
+    },
+
+    "custom/recording-pause": {
+        "exec": "~/.config/waybar/scripts/recording.sh pause",
+        "return-type": "json",
+        "on-click": "~/.config/hypr/scripts/record-toggle.sh pause"
+    },
+
+    "custom/recording-stop": {
+        "exec": "~/.config/waybar/scripts/recording.sh stop",
+        "return-type": "json",
+        "on-click": "~/.config/hypr/scripts/record-toggle.sh stop"
     },
 
     "privacy": {

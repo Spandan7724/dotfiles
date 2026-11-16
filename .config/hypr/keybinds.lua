@@ -391,6 +391,7 @@ bind(mainMod .. " + SHIFT + S", launch(scripts .. "/screenshot.sh area"), "Captu
 bind(mainMod .. " + CTRL + SHIFT + S", launch(scripts .. "/screenshot.sh area-copy"), "Copy selected region (laptop Ctrl+PrtSc)")
 bind(mainMod .. " + ALT + SHIFT + S", launch(scripts .. "/screenshot.sh window"), "Capture active window (laptop Alt+PrtSc)")
 bind(mainMod .. " + SHIFT + R", launch(scripts .. "/record-toggle.sh"), "Start or stop screen recording")
+bind(mainMod .. " + CTRL + SHIFT + R", launch(scripts .. "/record-toggle.sh pause"), "Pause or resume screen recording")
 bind(mainMod .. " + SHIFT + C", launch(scripts .. "/color-picker.sh"), "Pick color from screen")
 section("Notifications")
 bind(mainMod .. " + CTRL + ALT + N", launch("dunstctl history-pop"), "Show last notification")
